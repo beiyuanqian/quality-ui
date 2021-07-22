@@ -83,10 +83,7 @@
 </template>
 
 <script>
-<<<<<<< HEAD
   import { listDept, getDept, delDept, addDept, updateDept, listDeptExcludeChild } from "@/api/vadmin/permission/dept";
-=======
->>>>>>> e91aa8a0f6d14b05e56042d9cde5edd8c9313849
   import Treeselect from "@riophae/vue-treeselect";
   import "@riophae/vue-treeselect/dist/vue-treeselect.css";
   import {getList} from "../../../api/vadmin/permission/msg";

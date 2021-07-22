@@ -87,10 +87,7 @@
 </template>
 
 <script>
-<<<<<<< HEAD:src/views/quality/qulitythree/index.vue
   import { treeselect } from '@/api/vadmin/permission/dept'
-=======
->>>>>>> e91aa8a0f6d14b05e56042d9cde5edd8c9313849:src/views/quality/qulitytwo/index.vue
   import Treeselect from "@riophae/vue-treeselect";
   import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
