@@ -43,6 +43,7 @@
     "core-js": "3.8.1",
     "echarts": "^4.9.0",
     "element-ui": "2.15.0",
+    "eslint": "^7.31.0",
     "eslint-loader": "^4.0.2",
     "file-saver": "2.0.4",
     "fuse.js": "6.4.3",
