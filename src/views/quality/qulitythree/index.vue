@@ -1,27 +1,32 @@
 <template>
   <div class="app-container">
     <h1>售后问题管理新增</h1>
-    <el-form :model="form" ref="queryForm" :inline="true" :rules="rules" :label-position="labelPosition" label-width="100px">
+    <el-form :model="form" ref="queryForm" :inline="true" :rules="rules" :label-position="labelPosition" label-width="100px" >
       <el-form-item label="问题主题" prop="question_title">
-        <el-input v-model="form.question_title" clearable size="small" placeholder="请输入问题主题"/>
+        <el-input v-model="form.question_title" clearable size="small" @keyup.enter.native="handleQuery" placeholder="请输入问题主题"/>
       </el-form-item>
       <el-form-item label="机型类型" prop="machine_category">
-        <el-input v-model="form.machine_category" clearable size="small" placeholder="请输入机型类型"/>
+        <el-input v-model="form.machine_category" clearable size="small" @keyup.enter.native="handleQuery" placeholder="请输入机型类型"/>
       </el-form-item>
       <el-form-item label="机型名称" prop="machine_name">
-      <el-input v-model="form.machine_name" clearable size="small" placeholder="请输入机型名称"/>
+        <el-input v-model="form.machine_name" clearable size="small" @keyup.enter.native="handleQuery" placeholder="请输入机型名称"/>
       </el-form-item>
       <el-form-item label="涉及台数" prop="machine_num">
-        <el-input v-model="form.machine_num" clearable size="small" placeholder="请输入涉及台数"/>
+        <el-input v-model="form.machine_num" clearable size="small" @keyup.enter.native="handleQuery" placeholder="请输入涉及台数"/>
       </el-form-item>
       <el-form-item label="问题大类" prop="question_broad">
         <el-select v-model="form.question_broad" clearable size="small">
           <el-option v-for="dict in question_broadOptions" :key="dict.value" :label="dict.label" :value="dict.value"/>
         </el-select>
       </el-form-item>
+      <!--el-col :span="3">
+        <el-form-item label="责任部门" prop="duty_dep_id">
+          <treeselect v-model="form.duty_dep_id" :options="duty_dep_idOptions" :show-count="true" placeholder="请选择责任部门"/>
+        </el-form-item>
+      </el-col-->
       <el-form-item label="责任部门" prop="duty_dep_id">
-        <el-select v-model="form.duty_dep_id" clearable size="small" @queryTable="getList">
-          <el-option v-for="dict in duty_dep_idOptions" :key="dict.id" :label="dict.deptName" :value="dict.value"/>
+        <el-select v-model="form.duty_dep_id" clearable size="small">
+          <el-option v-for="dict in duty_dep_idOptions" :key="dict.value" :label="dict.label" :value="dict.value"/>
         </el-select>
       </el-form-item>
       <el-form-item label="责任科室" prop="department">
@@ -30,13 +35,13 @@
         </el-select>
       </el-form-item>
       <el-form-item label="责任人" prop="duty_person">
-        <el-input v-model="form.duty_person" clearable size="small" placeholder="请输入责任人"/>
+        <el-input v-model="form.duty_person" clearable size="small" @keyup.enter.native="handleQuery" placeholder="请输入责任人"/>
       </el-form-item>
       <el-form-item label="发生时间" prop="occur_time">
         <el-date-picker v-model="form.occur_time" type="date" placeholder="选择日期"></el-date-picker>
       </el-form-item>
       <el-form-item label="数量" prop="number">
-        <el-input v-model="form.number" clearable size="small" placeholder="请输入数量"/>
+        <el-input v-model="form.number" clearable size="small" @keyup.enter.native="handleQuery" placeholder="请输入数量"/>
       </el-form-item>
       <el-form-item label="重要程度" prop="question_level">
         <el-select v-model="form.question_level" clearable size="small">
@@ -54,7 +59,7 @@
         </el-select>
       </el-form-item>
       <el-form-item label="黑点" prop="black_point">
-        <el-input v-model="form.black_point" clearable size="small" placeholder="请输入黑点"/>
+        <el-input v-model="form.black_point" clearable size="small" @keyup.enter.native="handleQuery" placeholder="请输入黑点"/>
       </el-form-item>
       <el-form-item label="问题描述" prop="question_description" >
         <div style="margin: 0 500px;"></div>
@@ -66,11 +71,10 @@
       </el-form-item>
       <el-form-item label="附件" prop="attachment">
         <div style="margin: 0 500px;"></div>
-        <el-upload v-model="form.attachment" :before-upload="beforeUpload" class="upload-demo" ref="upload" action="https://jsonplaceholder.typicode.com/posts/"
-          :on-preview="handlePreview" :on-remove="handleRemove" :file-list="fileList" :auto-upload="false">
+        <el-upload class="upload-demo" ref="upload" action="https://jsonplaceholder.typicode.com/posts/" :on-preview="handlePreview"
+                   :on-remove="handleRemove" :file-list="fileList" :auto-upload="false">
           <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
-          <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
-          <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
+          <!--div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div-->
         </el-upload>
       </el-form-item>
       <el-form-item >
@@ -83,11 +87,9 @@
 </template>
 
 <script>
-  import { listDept, getDept, delDept, addDept, updateDept, listDeptExcludeChild } from "@/api/vadmin/permission/dept";
+  import { treeselect } from '@/api/vadmin/permission/dept'
   import Treeselect from "@riophae/vue-treeselect";
   import "@riophae/vue-treeselect/dist/vue-treeselect.css";
-  import {getList} from "../../../api/vadmin/permission/msg";
-  import log from "../../vadmin/monitor/job/log";
 
   export default {
     name: "Index",
@@ -96,12 +98,8 @@
       return {
         // 遮罩层
         loading: true,
-        //附件
-        fileList: [],
         // 责任部门树选项
-        duty_dep_idOptions: [
-          {"id":2,"create_datetime":"2021-02-27 07:25:09","update_datetime":"2021-07-20 14:56:13","creator_name":"admin","parentId":1,"dept_belong_id":"1","deptName":"计算机中心","orderNum":1,"owner":null,"phone":null,"email":null,"status":"1"}
-        ],
+        duty_dep_idOptions: [],
         // 责任科室树选项
         departmentOptions:[
           {value: '选项1', label: '科室1'},
@@ -116,7 +114,10 @@
           {value: '选项3', label: '类3'}
         ],
         //重要程度树选项
-        question_levelOptions: [],
+        question_levelOptions: [
+          {value: '选项1', label: '重要'},
+          {value: '选项2', label: '一般'}
+        ],
         //问题来源树选项
         question_originOptions: [
           {value: '选项1', label: '来源1'},
@@ -131,6 +132,7 @@
         labelPosition: 'right',
         // 表单参数
         form: {
+          pageNum: 'all',
           question_title: '',
           machine_category: '',
           machine_name: '',
@@ -201,58 +203,11 @@
     },
     created() {
       this.getList();
-      this.getlevelList();
+      this.getDicts("sys_normal_disable").then(response => {
+        this.duty_dep_idOptions = response.data;
+      });
     },
     methods: {
-      //查询重要程度
-      getlevelList(){
-        this.loading = true;
-        listLevel(this.form).then(response => {
-          console.log(response.data.result)
-          this.question_levelOptions = this.handleTree(response.data.result);
-          this.loading = false;
-        });
-      },
-      //附件上传校验
-      beforeUpload(file){
-        var testfile=file.name.substring(file.name.lastIndexOf('.')+1);
-        //限制文件格式
-        const type=(testfile === 'zip') || (testfile === 'rar');
-        //限制文件大小
-        const size=file.size / 1024 / 1024 < 10;
-        if(!type){
-          this.$mount({
-            message: '文件只能是zip、rar格式！',
-            type: 'warning'
-          });
-        }if(!size){
-          this.$message({
-            message: '文件大小不能超过10MB!',
-            type: 'warning'
-          });
-        }
-        return type && size;
-      },
-      /** 查询部门列表 */
-      getList() {
-        this.loading = true;
-        listDept(this.form).then(response => {
-          this.duty_dep_idOptions = this.handleTree(response.data.result);
-          console.log(this.duty_dep_idOptions)
-
-          this.loading = false;
-        });
-      },
-      //提交附件
-      submitUpload() {
-        this.$refs.upload.submit();
-      },
-      handleRemove(file, fileList) {
-        console.log(file, fileList);
-      },
-      handlePreview(file) {
-        console.log(file);
-      },
       //提交表单
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {

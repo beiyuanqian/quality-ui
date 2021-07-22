@@ -182,7 +182,7 @@ export function praseStrEmpty(str) {
  * @param {*} children 孩子节点字段 默认 'children'
  * @param {*} rootId 根Id 默认 0
  */
-export function handleTree(data, id, parentId, children, rootId) {
+export function handleTree(data, id, parentId, children, rootId,) {
 	id = id || 'id'
 	parentId = parentId || 'parentId'
 	children = children || 'children'
