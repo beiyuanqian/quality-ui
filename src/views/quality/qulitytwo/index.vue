@@ -91,7 +91,6 @@
 </template>
 
 <script>
-  import {addQuality} from "@/api/test/test";
   import Treeselect from "@riophae/vue-treeselect";
   import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
