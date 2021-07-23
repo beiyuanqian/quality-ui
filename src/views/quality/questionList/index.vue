@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-form :model="queryParams" ref="queryForm" :inline="true">
+    <el-form :model="queryParams" ref="queryForm" v-show="showSearch" :inline="true">
       <el-row>
         <el-col :span="4">
           <el-form-item label="问题主题" prop="question_title">
@@ -51,7 +51,7 @@
           </el-form-item>
         </el-col>
         <el-col :span="4">
-          <el-form-item label="是否关闭">
+          <el-form-item label="是否关闭" prop="title_status">
             <el-radio-group v-model="queryParams.title_status">
               <el-radio label="是">是</el-radio>
               <el-radio label="否">否</el-radio>
@@ -64,25 +64,9 @@
           </el-form-item>
         </el-col>
       </el-row>
-
-
-
-
-
-
-
-
-
-
-    <!--  <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" placeholder="部门状态" clearable size="small">
-          <el-option v-for="dict in statusOptions" :key="dict.dictValue" :label="dict.dictLabel"
-                     :value="dict.dictValue"/>
-        </el-select>
-      </el-form-item>-->
       <el-form-item>
-        <el-button type="primary" icon="el-icon-search" size="mini" >搜索</el-button>
-        <el-button icon="el-icon-refresh" size="mini" >重置</el-button>
+        <el-button type="primary" icon="el-icon-search" size="mini" @click="handleQuery">搜索</el-button>
+        <el-button icon="el-icon-refresh" size="mini" @click="resetQuery('queryForm')">重置</el-button>
       </el-form-item>
     </el-form>
 
@@ -93,33 +77,47 @@
           plain
           icon="el-icon-plus"
           size="mini"
-          @click=""
-        >新增
-        </el-button>
+          @click="addQuestion"
+          v-hasPermi="['permission:role:post']"
+        >新增</el-button>
       </el-col>
-      <right-toolbar  @queryTable=""></right-toolbar>
+      <el-col :span="1.5">
+        <el-button
+          type="success"
+          plain
+          icon="el-icon-edit"
+          size="mini"
+          :disabled="single"
+          @click="updateQuestion"
+          v-hasPermi="['permission:role:{id}:put']"
+        >修改</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
+          type="danger"
+          plain
+          icon="el-icon-delete"
+          :disable="multiple"
+          size="mini"
+          @click="deleteQuestion"
+          v-hasPermi="['permission:role:{id}:delete']"
+        >删除</el-button>
+      </el-col>
+      <el-col :span="1.5">
+        <el-button
+          type="warning"
+          plain
+          icon="el-icon-download"
+          size="mini"
+          @click="handleExport"
+          v-hasPermi="['permission:role:export:get']"
+        >导出</el-button>
+      </el-col>
+      <right-toolbar :showSearch.sync="showSearch" @queryTable="getQuestionList"></right-toolbar>
     </el-row>
 
-    <!--<el-table
-      v-loading="loading"
-      :data="deptList"
-      row-key="id"
-      default-expand-all
-      :tree-props="{children: 'children', hasChildren: 'hasChildren'}"
-    >
-      <el-table-column prop="deptName" label="部门名称"></el-table-column>
-      <el-table-column prop="orderNum" label="排序" width="200"></el-table-column>
-      <el-table-column prop="status" label="状态" :formatter="statusFormat" width="200"></el-table-column>
-      <el-table-column label="更新时间" align="center" prop="update_datetime">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.update_datetime) }}</span>
-        </template>
-      </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="create_datetime">
-        <template slot-scope="scope">
-          <span>{{ parseTime(scope.row.create_datetime) }}</span>
-        </template>
-      </el-table-column>
+    <el-table v-loading="loading" :data="questionList" @selection-change="handleSelectionChange">
+      <el-table-column type="selection" width="55" align="center"></el-table-column>
       <el-table-column
         label="操作"
         align="center"
@@ -131,7 +129,6 @@
             size="mini"
             type="text"
             icon="el-icon-edit"
-            @click="handleUpdate(scope.row)"
             v-hasPermi="['permission:dept:{id}:put']"
           >修改
           </el-button>
@@ -139,22 +136,50 @@
             size="mini"
             type="text"
             icon="el-icon-plus"
-            @click="handleAdd(scope.row)"
             v-hasPermi="['permission:dept:post']"
-          >新增
+          >复制
           </el-button>
           <el-button
-            v-if="scope.row.parentId != 0"
             size="mini"
             type="text"
             icon="el-icon-delete"
-            @click="handleDelete(scope.row)"
             v-hasPermi="['permission:dept:{id}:delete']"
           >删除
           </el-button>
         </template>
       </el-table-column>
-    </el-table>-->
+      <el-table-column prop="question_title" label="问题主题"></el-table-column>
+      <el-table-column prop="occur_time" label="发生时间"></el-table-column>
+      <el-table-column prop="title_status" label="状态"></el-table-column>
+      <el-table-column prop="machine_category" label="机别类型"></el-table-column>
+      <el-table-column prop="machine_name" label="机型名称"></el-table-column>
+      <el-table-column prop="machine_num" label="涉及台数"></el-table-column>
+      <el-table-column label="责任部门">
+        <template slot-scope="{row}">
+          {{row.duty_dep_id | deptNameFilter}}
+        </template>
+      </el-table-column>
+      <el-table-column label="责任科室">
+        <template slot-scope="{row}">
+          {{row.duty_office_id | deptNameFilter}}
+        </template>
+      </el-table-column>
+      <el-table-column label="责任人">
+        <template slot-scope="{row}">
+          {{row.duty_person | personNameFilter}}
+        </template>
+      </el-table-column>
+      <el-table-column prop="question_origin" label="问题来源"></el-table-column>
+      <el-table-column prop="question_description" label="问题描述" width="200"></el-table-column>
+    </el-table>
+
+    <pagination
+      v-show="total>0"
+      :total="total"
+      :page.sync="queryParams.pageNum"
+      :limit.sync="queryParams.pageSize"
+      @pagination="getQuestionList"
+    />
 
     <!-- 添加或修改部门对话框 -->
    <!-- <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body>
@@ -215,11 +240,37 @@
 <script>
   import {broadList} from '@/api/quality/broad';
   import {listDept} from '@/api/vadmin/permission/dept';
+  import {questionList} from '@/api/quality/question';
+  import {listUser} from '@/api/vadmin/permission/user';
 
+  let AllDeptName = [];
+  let AllPersonName = [];
   export default {
     name: "index",
+    filters: {
+      personNameFilter(personId) {
+        const Id = parseInt(personId);
+        const message = AllPersonName.find(item => item.id === Id);
+        return message ? message.roleName : null
+      },
+      deptNameFilter(deptId) {
+        const Id = parseInt(deptId);
+        const message = AllDeptName.find(item => item.id === Id);
+        return message ? message.deptName :null
+      }
+    },
     data() {
       return{
+        //遮罩层
+        loading: true,
+        //显示搜索条件
+        showSearch:true,
+        // 总条数
+        total: 0,
+        // 非单个禁用
+        single: true,
+        // 非多个禁用
+        multiple: true,
         // 查询参数
         queryParams: {
           question_title: undefined,
@@ -231,7 +282,9 @@
           question_broad: undefined,
           question_slender: undefined,
           title_status: undefined,
-          occur_time: undefined
+          occur_time: undefined,
+          pageNum: 1,
+          pageSize: 10,
         },
         // 问题大类提交
         broadParams:{
@@ -243,37 +296,102 @@
           pageNum: 'all',
           parentId: 1,
         },
+        // 获取所有部门
+        deptAll:{
+          pageNum: 'all'
+        },
+        // 获取所有人员
+        personAll:{
+          pageNum: 'all'
+        },
         // 部门List
         deptList: [],
         // 科室List
         officeList: [],
+        // 售后问题List
+        questionList: [],
+
 
       }
     },
     created() {
       this.getBroadList();
-      this.getDeptList()
+      this.getDeptList();
+      this.getQuestionList();
+      this.getPersonAll();
+      this.getDeptAll();
     },
     methods: {
-      // 获取问题大类listAll
+      /*获取问题大类listAll*/
       getBroadList(){
         broadList(this.broadParams).then(response => {
           this.broadList = response.data
         })
       },
-      //加载部门list
+      /*加载部门list*/
       getDeptList(){
         listDept(this.deptParams).then(response => {
           this.deptList = response.data
         })
       },
-      //加载科室list
+      /*加载科室list*/
       getOfficeList(officeId){
         this.deptParams.parentId = officeId;
         listDept(this.deptParams).then(response =>{
           this.officeList = response.data
         })
-      }
+      },
+      /*加载全部部门*/
+      getDeptAll(){
+        listDept(this.deptAll).then(response => {
+          AllDeptName = response.data
+        })
+      },
+      /*加载所有人员*/
+      getPersonAll(){
+        listUser(this.personAll).then(response => {
+          AllPersonName = response.data
+        })
+      },
+      /*搜索提交*/
+      handleQuery() {
+        this.queryParams.pageNum = 1;
+        this.getQuestionList();
+      },
+      /*搜索重置*/
+      resetQuery(formName) {
+        this.$refs[formName].resetFields();
+      },
+      /*问题搜索*/
+      getQuestionList(){
+        this.loading = true;
+        questionList(this.queryParams).then(response => {
+          this.questionList = response.data.results;
+          this.loading=false;
+        })
+      },
+      /*新增*/
+      addQuestion(row){
+
+      },
+      /*删除*/
+      deleteQuestion(row){
+
+      },
+      /*修改*/
+      updateQuestion(row){
+
+      },
+      /*导出*/
+      handleExport(){
+
+      },
+      /*多选框选中数据*/
+      handleSelectionChange(selection) {
+        this.ids = selection.map(item => item.id);
+        this.single = selection.length!==1;
+        this.multiple = !selection.length
+      },
     }
   }
 </script>
