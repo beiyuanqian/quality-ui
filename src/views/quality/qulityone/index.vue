@@ -9,7 +9,7 @@
         <el-input v-model="form.machine_category" clearable size="small" placeholder="请输入机型类型"/>
       </el-form-item>
       <el-form-item label="机型名称" prop="machine_name">
-        <el-input v-model="form.machine_name" clearable size="small" placeholder="请输入机型名称"/>
+      <el-input v-model="form.machine_name" clearable size="small" placeholder="请输入机型名称"/>
       </el-form-item>
       <el-form-item label="涉及台数" prop="machine_num">
         <el-input v-model="form.machine_num" clearable size="small" placeholder="请输入涉及台数"/>
@@ -94,6 +94,7 @@
   import {addSaveFile} from "@/api/vadmin/system/savefile";
   import Treeselect from "@riophae/vue-treeselect";
   // import "@riophae/vue-treeselect/dist/vue-treeselect.css";
+
   export default {
     name: "Index",
     // components: {Treeselect},
@@ -130,7 +131,7 @@
         },
         //问题来源树选项
         question_originOptions: [
-        ],
+         ],
         //关闭与否树选项
         title_statusOptions: [
           { value: '是', label: '是'},
@@ -283,6 +284,7 @@
       beforeRemove(file, fileList) {
         return this.$confirm(`确定移除 ${ file.name }？`);
       },
+
       //提交表单
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {
@@ -305,3 +307,4 @@
     },
   };
 </script>
+
