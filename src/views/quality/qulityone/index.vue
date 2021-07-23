@@ -16,17 +16,20 @@
       </el-form-item>
       <el-form-item label="问题大类" prop="question_broad">
         <el-select v-model="form.question_broad" clearable size="small">
-          <el-option v-for="dict in question_broadOptions" :key="dict.value" :label="dict.label" :value="dict.value"/>
+          <el-option v-for="dict in question_broadOptions" :key="dict.id" :label="dict.question_name" :value="dict.id"/>
         </el-select>
+      </el-form-item>
+      <el-form-item label="问题细类" prop="question_slender">
+        <el-input v-model="form.question_slender" clearable size="small" placeholder="请输入问题细类"/>
       </el-form-item>
       <el-form-item label="责任部门" prop="duty_dep_id">
-        <el-select v-model="form.duty_dep_id" clearable size="small" @queryTable="getList">
-          <el-option v-for="dict in duty_dep_idOptions" :key="dict.id" :label="dict.deptName" :value="dict.value"/>
+        <el-select v-model="form.duty_dep_id" clearable size="small" @change="getOfficeList(form.duty_dep_id)">
+          <el-option v-for="dict in duty_dep_idOptions" :key="dict.id" :label="dict.deptName" :value="dict.id"/>
         </el-select>
       </el-form-item>
-      <el-form-item label="责任科室" prop="department">
-        <el-select v-model="form.department" clearable size="small">
-          <el-option v-for="dict in departmentOptions" :key="dict.value" :label="dict.label" :value="dict.value"/>
+      <el-form-item label="责任科室" prop="duty_office_id">
+        <el-select v-model="form.duty_office_id" clearable size="small">
+          <el-option v-for="dict in duty_office_idOptions" :key="dict.id" :label="dict.deptName" :value="dict.id"/>
         </el-select>
       </el-form-item>
       <el-form-item label="责任人" prop="duty_person">
@@ -40,12 +43,12 @@
       </el-form-item>
       <el-form-item label="重要程度" prop="question_level">
         <el-select v-model="form.question_level" clearable size="small">
-          <el-option v-for="dict in question_levelOptions" :key="dict.value" :label="dict.label" :value="dict.value"/>
+          <el-option v-for="dict in question_levelOptions" :key="dict.question_level" :label="dict.question_level" :value="dict.question_level"/>
         </el-select>
       </el-form-item>
       <el-form-item label="问题来源" prop="question_origin">
         <el-select v-model="form.question_origin" clearable size="small">
-          <el-option v-for="dict in question_originOptions" :key="dict.value" :label="dict.label" :value="dict.value"/>
+          <el-option v-for="dict in question_originOptions" :key="dict.question_origin" :label="dict.question_origin" :value="dict.question_origin"/>
         </el-select>
       </el-form-item>
       <el-form-item label="关闭与否" prop="title_status">
@@ -66,12 +69,39 @@
       </el-form-item>
       <el-form-item label="附件" prop="attachment">
         <div style="margin: 0 500px;"></div>
-        <el-upload v-model="form.attachment" :before-upload="beforeUpload" class="upload-demo" ref="upload" action="https://jsonplaceholder.typicode.com/posts/"
+        <el-upload
+          v-model="form.attachment"
+          :before-upload="beforeUpload"
+          class="upload-demo"
+          action="https://jsonplaceholder.typicode.com/posts/"
+          :on-preview="handlePreview"
+          :on-remove="handleRemove"
+          :before-remove="beforeRemove"
+          multiple
+          :file-list="fileList">
+          <el-button size="small" type="primary">点击上传</el-button>
+        </el-upload>
+        <!--el-upload v-model="form.attachment" :before-upload="beforeUpload" class="upload-demo" ref="upload" action="https://jsonplaceholder.typicode.com/posts/"
           :on-preview="handlePreview" :on-remove="handleRemove" :file-list="fileList" :auto-upload="false">
           <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
           <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
           <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
-        </el-upload>
+        </el-upload-->
+        <!--el-upload
+          class="upload-demo"
+          action="file"
+          :auto-upload="false"
+          :on-remove="handleRemove"
+          :on-change="uploadChange"
+          :on-preview="handleClickEvent"
+          :file-list="upload['fileList']"
+          multiple
+          :limit="1"
+          accept=".pdf,.PDF"
+          :on-exceed="handleExceed">
+          <el-button size="small" type="primary">点击上传</el-button>
+          <div slot="tip" style="color:#f00;"><small>注：只支持.pdf文档格式，最大不超过5m。</small></div>
+        </el-upload-->
       </el-form-item>
       <el-form-item >
         <div style="margin: 0 500px;"></div>
@@ -83,11 +113,13 @@
 </template>
 
 <script>
-  import { listDept, getDept, delDept, addDept, updateDept, listDeptExcludeChild } from "@/api/vadmin/permission/dept";
+  import {listDept} from "@/api/vadmin/permission/dept";
+  import {broadList} from '@/api/quality/broad';
+  import {levelList} from '@/api/quality/level';
+  import {originList} from '@/api/quality/origin';
+  import {questionAdd} from '@/api/quality/question';
   import Treeselect from "@riophae/vue-treeselect";
   import "@riophae/vue-treeselect/dist/vue-treeselect.css";
-  import {getList} from "../../../api/vadmin/permission/msg";
-  import log from "../../vadmin/monitor/job/log";
 
   export default {
     name: "Index",
@@ -98,37 +130,43 @@
         loading: true,
         //附件
         fileList: [],
+        //责任部门树
+        deptParams:{
+          pageNum: 'all',
+          parentId: 1,
+        },
         // 责任部门树选项
-        duty_dep_idOptions: [
-          {"id":2,"create_datetime":"2021-02-27 07:25:09","update_datetime":"2021-07-20 14:56:13","creator_name":"admin","parentId":1,"dept_belong_id":"1","deptName":"计算机中心","orderNum":1,"owner":null,"phone":null,"email":null,"status":"1"}
-        ],
+        duty_dep_idOptions: [],
         // 责任科室树选项
-        departmentOptions:[
-          {value: '选项1', label: '科室1'},
-          {value: '选项2', label: '科室2'},
-          {value: '选项3', label: '科室3'}
-        ],
-        value: '',
+        duty_office_idOptions:[],
+        // 问题大类提交
+        broadParams:{
+          pageNum: 'all'
+        },
         //问题大类树选项
-        question_broadOptions: [
-          {value: '选项1', label: '类1'},
-          {value: '选项2', label: '类2'},
-          {value: '选项3', label: '类3'}
-        ],
+        question_broadOptions: [],
+        //重要程度提交
+        levelParams:{
+          pageNum: 'all'
+        },
         //重要程度树选项
         question_levelOptions: [],
+        //问题来源提交
+        originParams:{
+          pageNum: 'all'
+        },
         //问题来源树选项
         question_originOptions: [
-          {value: '选项1', label: '来源1'},
-          {value: '选项2', label: '来源2'}
-        ],
+         ],
         //关闭与否树选项
         title_statusOptions: [
-          {value: '选项1', label: '是'},
-          {value: '选项2', label: '否'}
+          { value: '是', label: '是'},
+          { value: '否', label: '否'},
         ],
         //对齐方式
         labelPosition: 'right',
+        //附件
+        fileList: [],
         // 表单参数
         form: {
           question_title: '',
@@ -137,8 +175,8 @@
           machine_num: '',
           question_broad: '',
           question_slender: '',
-          department:'',
           duty_dep_id: '',
+          duty_office_id: undefined,
           duty_person: '',
           occur_time: '',
           number: '',
@@ -148,7 +186,7 @@
           black_point: '',
           question_description: '',
           question_schedule: '',
-          attachment: '',
+          attachment: undefined,
         },
         // 表单校验
         rules: {
@@ -159,7 +197,7 @@
           question_broad: [{required: true, message: '请输入问题大类', trigger: 'blur'}],
           question_slender: [{required: true, message: '请输入问题细类', trigger: 'blur'}],
           duty_dep_id: [{required: true, message: '请选择责任部门', trigger: 'change'}],
-          department: [{required: true, message: '请选择责任科室', trigger: 'change'}],
+          //duty_office_id: [{required: true, message: '请选择责任科室', trigger: 'change'}],
           duty_person: [{required: true, message: '请输入责任人', trigger: 'blur'}],
           occur_time: [{required: true, message: '请输入发生时间', trigger: 'blur'}],
           number: [{required: true, message: '请输入数量', trigger: 'blur'}],
@@ -200,18 +238,43 @@
       };
     },
     created() {
-      this.getList();
-      this.getlevelList();
+      this.getBroadList();
+      this.getDeptList();
+      this.getLevelList();
+      this.getOriginList();
     },
     methods: {
-      //查询重要程度
-      getlevelList(){
-        this.loading = true;
-        listLevel(this.form).then(response => {
-          console.log(response.data.result)
-          this.question_levelOptions = this.handleTree(response.data.result);
-          this.loading = false;
-        });
+      //获取问题来源
+      getOriginList(){
+        originList(this.originParams).then(response =>{
+          this.question_originOptions=response.data
+        })
+      },
+      // 获取重要程度
+      getLevelList(){
+        levelList(this.levelParams).then(response => {
+          this.question_levelOptions = response.data
+        })
+      },
+      // 获取问题大类listAll
+      getBroadList(){
+        broadList(this.broadParams).then(response => {
+          console.log(response.data)
+          this.question_broadOptions = response.data
+        })
+      },
+      //加载部门list
+      getDeptList(){
+        listDept(this.deptParams).then(response => {
+          this.duty_dep_idOptions = response.data
+        })
+      },
+      //加载科室list
+      getOfficeList(officeId){
+        this.deptParams.parentId = officeId;
+        listDept(this.deptParams).then(response =>{
+          this.duty_office_idOptions = response.data
+        })
       },
       //附件上传校验
       beforeUpload(file){
@@ -233,32 +296,23 @@
         }
         return type && size;
       },
-      /** 查询部门列表 */
-      getList() {
-        this.loading = true;
-        listDept(this.form).then(response => {
-          this.duty_dep_idOptions = this.handleTree(response.data.result);
-          console.log(this.duty_dep_idOptions)
-
-          this.loading = false;
-        });
-      },
-      //提交附件
-      submitUpload() {
-        this.$refs.upload.submit();
-      },
+      //附件
       handleRemove(file, fileList) {
         console.log(file, fileList);
       },
       handlePreview(file) {
         console.log(file);
       },
+      beforeRemove(file, fileList) {
+        return this.$confirm(`确定移除 ${ file.name }？`);
+      },
+
       //提交表单
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {
           if (valid) {
             const cloneData = JSON.parse(JSON.stringify(this.form))
-            addQuality(cloneData).then(response => {
+            questionAdd(cloneData).then(response => {
               this.msgSuccess("新增成功");
               this.open = false;
               alert('submit!');
