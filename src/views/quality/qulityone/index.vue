@@ -69,39 +69,12 @@
       </el-form-item>
       <el-form-item label="附件" prop="attachment">
         <div style="margin: 0 500px;"></div>
-        <el-upload
-          v-model="form.attachment"
-          :before-upload="beforeUpload"
-          class="upload-demo"
-          action="https://jsonplaceholder.typicode.com/posts/"
-          :on-preview="handlePreview"
-          :on-remove="handleRemove"
-          :before-remove="beforeRemove"
-          multiple
-          :file-list="fileList">
-          <el-button size="small" type="primary">点击上传</el-button>
-        </el-upload>
-        <!--el-upload v-model="form.attachment" :before-upload="beforeUpload" class="upload-demo" ref="upload" action="https://jsonplaceholder.typicode.com/posts/"
-          :on-preview="handlePreview" :on-remove="handleRemove" :file-list="fileList" :auto-upload="false">
-          <el-button slot="trigger" size="small" type="primary">选取文件</el-button>
+        <el-upload class="upload-demo" ref="upload" :before-upload="beforeUpload" :on-preview="handlePreview" :on-remove="handleRemove" :file-list="fileList" :http-request="requestUpload" :auto-upload="false" action="#">
+          <template #trigger>
+            <el-button size="small" type="primary">选取文件</el-button>
+          </template>
           <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
-          <div slot="tip" class="el-upload__tip">只能上传jpg/png文件，且不超过500kb</div>
-        </el-upload-->
-        <!--el-upload
-          class="upload-demo"
-          action="file"
-          :auto-upload="false"
-          :on-remove="handleRemove"
-          :on-change="uploadChange"
-          :on-preview="handleClickEvent"
-          :file-list="upload['fileList']"
-          multiple
-          :limit="1"
-          accept=".pdf,.PDF"
-          :on-exceed="handleExceed">
-          <el-button size="small" type="primary">点击上传</el-button>
-          <div slot="tip" style="color:#f00;"><small>注：只支持.pdf文档格式，最大不超过5m。</small></div>
-        </el-upload-->
+        </el-upload>
       </el-form-item>
       <el-form-item >
         <div style="margin: 0 500px;"></div>
@@ -118,12 +91,13 @@
   import {levelList} from '@/api/quality/level';
   import {originList} from '@/api/quality/origin';
   import {questionAdd} from '@/api/quality/question';
+  import {addSaveFile} from "@/api/vadmin/system/savefile";
   import Treeselect from "@riophae/vue-treeselect";
-  import "@riophae/vue-treeselect/dist/vue-treeselect.css";
+  // import "@riophae/vue-treeselect/dist/vue-treeselect.css";
 
   export default {
     name: "Index",
-    components: {Treeselect},
+    // components: {Treeselect},
     data() {
       return {
         // 遮罩层
@@ -165,8 +139,6 @@
         ],
         //对齐方式
         labelPosition: 'right',
-        //附件
-        fileList: [],
         // 表单参数
         form: {
           question_title: '',
@@ -259,7 +231,6 @@
       // 获取问题大类listAll
       getBroadList(){
         broadList(this.broadParams).then(response => {
-          console.log(response.data)
           this.question_broadOptions = response.data
         })
       },
@@ -278,23 +249,30 @@
       },
       //附件上传校验
       beforeUpload(file){
-        var testfile=file.name.substring(file.name.lastIndexOf('.')+1);
+        const testFile = file.name.substring(file.name.lastIndexOf('.') + 1);
         //限制文件格式
-        const type=(testfile === 'zip') || (testfile === 'rar');
+        const type=(testFile === 'zip')||(testFile === 'rar') || (testFile === '7z') || (testFile === 'png') ||
+          (testFile === 'jpeg') || (testFile === 'bmp') || (testFile === 'jpg') || (testFile === 'docx') || (testFile === 'xlsx')
+          || (testFile === 'doc') || (testFile === 'xls') || (testFile === 'pptx') || (testFile === 'pdf') || (testFile === 'msg') ;
         //限制文件大小
         const size=file.size / 1024 / 1024 < 10;
         if(!type){
-          this.$mount({
-            message: '文件只能是zip、rar格式！',
-            type: 'warning'
-          });
+          this.msgError('文件只能是zip,rar,7z,png,jpeg,bmp,jpg,docx,xlsx,doc,xls,pptx,pdf,msg格式!');
         }if(!size){
-          this.$message({
-            message: '文件大小不能超过10MB!',
-            type: 'warning'
-          });
+          this.msgWarning('文件大小不能超过10MB');
         }
         return type && size;
+      },
+      requestUpload(data){
+        let formData = new FormData();
+        formData.append("file", data);
+        addSaveFile(formData).then(response => {
+          console.log(response.data.file_url)
+        })
+      },
+      //文件上传提交
+      submitUpload(){
+        this.requestUpload()
       },
       //附件
       handleRemove(file, fileList) {
@@ -311,7 +289,7 @@
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {
           if (valid) {
-            const cloneData = JSON.parse(JSON.stringify(this.form))
+            const cloneData = JSON.parse(JSON.stringify(this.form));
             questionAdd(cloneData).then(response => {
               this.msgSuccess("新增成功");
               this.open = false;
