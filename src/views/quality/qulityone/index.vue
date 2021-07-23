@@ -36,7 +36,7 @@
         <el-input v-model="form.duty_person" clearable size="small" placeholder="请输入责任人"/>
       </el-form-item>
       <el-form-item label="发生时间" prop="occur_time">
-        <el-date-picker v-model="form.occur_time" type="date" placeholder="选择日期"></el-date-picker>
+        <el-date-picker v-model="form.occur_time" clearable type="date" placeholder="选择日期"></el-date-picker>
       </el-form-item>
       <el-form-item label="数量" prop="number">
         <el-input v-model="form.number" clearable size="small" placeholder="请输入数量"/>
@@ -179,7 +179,7 @@
           black_point: [{required: true, message: '请输入黑点', trigger: 'change'}],
           question_description: [{required: true, message: '请输入问题描述', trigger: 'change'}],
           question_schedule: [{required: true, message: '请输入最新进度', trigger: 'change'}],
-          attachment: [{required: true, message: '请选择附件', trigger: 'change'}],
+          // attachment: [{required: true, message: '请选择附件', trigger: 'change'}],
         },
         //发生时间选择
         pickerOptions: {
