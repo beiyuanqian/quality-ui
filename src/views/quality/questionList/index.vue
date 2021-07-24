@@ -77,7 +77,7 @@
           plain
           icon="el-icon-plus"
           size="mini"
-          @click="addQuestion"
+          @click="addPath"
           v-hasPermi="['permission:role:post']"
         >新增</el-button>
       </el-col>
@@ -116,11 +116,14 @@
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getQuestionList"></right-toolbar>
     </el-row>
 
-    <el-table v-loading="loading" :data="questionList" @selection-change="handleSelectionChange">
+    <!--售后问题Table-->
+    <el-table v-loading="loading" :data="questionList" @selection-change="handleSelectionChange" style="width: 100%">
       <el-table-column type="selection" width="55" align="center"></el-table-column>
       <el-table-column
         label="操作"
         align="center"
+        fixed
+        width="200"
         class-name="small-padding fixed-width"
         v-if="hasPermi(['permission:dept:{id}:put','permission:dept:post','permission:dept:{id}:delete'])"
       >
@@ -130,6 +133,7 @@
             type="text"
             icon="el-icon-edit"
             v-hasPermi="['permission:dept:{id}:put']"
+            @click="updateQuestion(scope.row)"
           >修改
           </el-button>
           <el-button
@@ -144,32 +148,29 @@
             type="text"
             icon="el-icon-delete"
             v-hasPermi="['permission:dept:{id}:delete']"
+            @click="deleteQuestion(scope.row)"
           >删除
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column prop="question_title" label="问题主题"></el-table-column>
-      <el-table-column prop="occur_time" label="发生时间"></el-table-column>
-      <el-table-column prop="title_status" label="状态"></el-table-column>
-      <el-table-column prop="machine_category" label="机别类型"></el-table-column>
-      <el-table-column prop="machine_name" label="机型名称"></el-table-column>
-      <el-table-column prop="machine_num" label="涉及台数"></el-table-column>
-      <el-table-column label="责任部门">
+      <el-table-column prop="question_title" label="问题主题" width="150"></el-table-column>
+      <el-table-column prop="occur_time" label="发生时间" width="150"></el-table-column>
+      <el-table-column prop="title_status" label="状态" width="150"></el-table-column>
+      <el-table-column prop="machine_category" label="机别类型" width="150"></el-table-column>
+      <el-table-column prop="machine_name" label="机型名称" width="150"></el-table-column>
+      <el-table-column prop="machine_num" label="涉及台数" width="150"></el-table-column>
+      <el-table-column label="责任部门" width="150">
         <template slot-scope="{row}">
           {{row.duty_dep_id | deptNameFilter}}
         </template>
       </el-table-column>
-      <el-table-column label="责任科室">
+      <el-table-column label="责任科室" width="150">
         <template slot-scope="{row}">
           {{row.duty_office_id | deptNameFilter}}
         </template>
       </el-table-column>
-      <el-table-column label="责任人">
-        <template slot-scope="{row}">
-          {{row.duty_person | personNameFilter}}
-        </template>
-      </el-table-column>
-      <el-table-column prop="question_origin" label="问题来源"></el-table-column>
+      <el-table-column prop="duty_person" label="责任人" width="150"></el-table-column>
+      <el-table-column prop="question_origin" label="问题来源" width="150"></el-table-column>
       <el-table-column prop="question_description" label="问题描述" width="200"></el-table-column>
     </el-table>
 
@@ -182,77 +183,122 @@
     />
 
     <!-- 添加或修改部门对话框 -->
-   <!-- <el-dialog :title="title" :visible.sync="open" width="600px" append-to-body>
-      <el-form ref="form" :model="form" :rules="rules" label-width="80px">
+    <el-dialog :title="title" :visible.sync="open" append-to-body>
+      <el-form ref="form" :model="form" :inline="true" :rules="rules" label-width="80px">
         <el-row>
-          <el-col :span="24" v-if="form.parentId !== 0">
-            <el-form-item label="上级部门" prop="parentId">
-              <treeselect v-model="form.parentId" :options="deptOptions" :normalizer="normalizer" placeholder="选择上级部门"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="部门名称" prop="deptName">
-              <el-input v-model="form.deptName" placeholder="请输入部门名称"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="显示排序" prop="orderNum">
-              <el-input-number v-model="form.orderNum" controls-position="right" :min="0"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="负责人" prop="leader">
-              <el-input v-model="form.leader" placeholder="请输入负责人" maxlength="20"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="联系电话" prop="phone">
-              <el-input v-model="form.phone" placeholder="请输入联系电话" maxlength="11"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="邮箱" prop="email">
-              <el-input v-model="form.email" placeholder="请输入邮箱" maxlength="50"/>
-            </el-form-item>
-          </el-col>
-          <el-col :span="12">
-            <el-form-item label="部门状态">
-              <el-radio-group v-model="form.status">
-                <el-radio
-                  v-for="dict in statusOptions"
-                  :key="dict.dictValue"
-                  :label="dict.dictValue"
-                >{{dict.dictLabel}}
-                </el-radio>
-              </el-radio-group>
-            </el-form-item>
-          </el-col>
+          <el-form-item label="问题主题" prop="question_title">
+            <el-input v-model="form.question_title" size="small" placeholder="请输入问题主题" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="机器类型" prop="machine_category">
+            <el-input v-model="form.machine_category" size="small" placeholder="请输入机器类型" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="机器名称" prop="machine_name">
+            <el-input v-model="form.machine_name" size="small" placeholder="请输入机器名称" clearable></el-input>
+          </el-form-item>
+        </el-row>
+        <el-row>
+          <el-form-item label="涉及台数" prop="machine_num">
+            <el-input v-model="form.machine_num" size="small" placeholder="请输入涉及台数" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="问题大类" prop="question_broad">
+            <el-select v-model="form.question_broad" size="small" placeholder="请选择问题大类" clearable>
+              <el-option v-for="item in broadList" :value="item.question_name" :label="item.question_name" :key="item.question_name"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="问题细类" prop="question_slender">
+            <el-input v-model="form.question_slender" size="small" placeholder="请输入问题细类" clearable></el-input>
+          </el-form-item>
+        </el-row>
+        <el-row>
+          <el-form-item label="责任部门" prop="duty_dep_id">
+            <el-select v-model="form.duty_dep_id" size="small" placeholder="请选择责任部门" clearable>
+              <el-option v-for="item in deptList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="责任科室" prop="duty_dep_id">
+            <el-select v-model="form.duty_office_id" size="small" placeholder="请选择责任科室" clearable>
+              <el-option v-for="item in deptList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="责任人" prop="duty_person">
+            <el-input v-model="form.duty_person" size="small" placeholder="请输入责任人" clearable></el-input>
+          </el-form-item>
+        </el-row>
+        <el-row>
+          <el-form-item label="故障数量" prop="number">
+            <el-input v-model="form.number" size="small" placeholder="请输入故障数量" clearable></el-input>
+          </el-form-item>
+          <el-form-item label="重要程度" prop="question_level">
+            <el-select v-model="form.question_level" size="small" placeholder="请选择严重程度" clearable>
+              <el-option label="一般" value="一般"></el-option>
+              <el-option label="重要" value="重要"></el-option>
+              <el-option label="非常重要" value="非常重要"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="发送时间" prop="occur_time">
+            <el-date-picker v-model="form.occur_time" size="small" placeholder="请选择时间" clearable></el-date-picker>
+          </el-form-item>
+        </el-row>
+        <el-row>
+          <el-form-item label="问题来源" prop="question_level">
+            <el-select v-model="form.question_origin" size="small" placeholder="请选择" clearable>
+              <el-option v-for="item in originList" :label="item.question_origin" :value="item.question_origin" :key="item.question_origin"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="关闭与否" prop="title_status">
+            <el-select v-model="form.title_status" size="small" placeholder="请选择" clearable>
+              <el-option label="是" value="是"></el-option>
+              <el-option label="否" value="否"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="黑点" prop="black_point">
+            <el-input v-model="form.black_point" size="small" placeholder="请输入黑点" clearable>
+            </el-input>
+          </el-form-item>
+        </el-row>
+        <el-row>
+          <el-form-item label="问题描述" prop="question_description">
+            <el-input type="textarea" style="width: 800px" :autosize="{ minRows: 5}" v-model="form.question_description" size="small" placeholder="请输入问题描述" clearable></el-input>
+          </el-form-item>
+        </el-row>
+        <el-row>
+          <el-form-item label="最新进度" prop="question_schedule">
+            <el-input type="textarea" style="width: 800px" :autosize="{ minRows: 5}" v-model="form.question_schedule" size="small" placeholder="请输入最新进度" clearable></el-input>
+          </el-form-item>
+        </el-row>
+        <el-row>
+          <el-form-item label="添加附件" prop="attachment">
+            <el-upload class="upload-demo" ref="upload" :file-list="fileList" :http-request="requestUpload"
+                       :on-preview="handlePreview" :on-remove="handleRemove" :auto-upload="false" action="">
+              <template #trigger>
+                <el-button size="small" type="primary">选取文件</el-button>
+              </template>
+              <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
+            </el-upload>
+            <el-input v-model="form.attachment" type="hidden"></el-input>
+          </el-form-item>
         </el-row>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" @click="submitForm">确 定</el-button>
         <el-button @click="cancel">取 消</el-button>
       </div>
-    </el-dialog>-->
+    </el-dialog>
   </div>
 </template>
 
 <script>
   import {broadList} from '@/api/quality/broad';
   import {listDept} from '@/api/vadmin/permission/dept';
-  import {questionList} from '@/api/quality/question';
-  import {listUser} from '@/api/vadmin/permission/user';
+  import {questionList, questionUpdate, questionDelete} from '@/api/quality/question';
+  import {originList} from '@/api/quality/origin';
+  import {addSaveFile} from "@/api/vadmin/system/savefile";
 
   let AllDeptName = [];
-  let AllPersonName = [];
+  // let AllPersonName = [];
   export default {
     name: "index",
     filters: {
-      personNameFilter(personId) {
-        const Id = parseInt(personId);
-        const message = AllPersonName.find(item => item.id === Id);
-        return message ? message.roleName : null
-      },
       deptNameFilter(deptId) {
         const Id = parseInt(deptId);
         const message = AllDeptName.find(item => item.id === Id);
@@ -310,6 +356,38 @@
         officeList: [],
         // 售后问题List
         questionList: [],
+        open: false,
+        // 修改提交参数
+        form: {
+          id: undefined,
+          question_title: undefined,
+          machine_category: undefined,
+          machine_name: undefined,
+          machine_num: undefined,
+          question_broad: undefined,
+          question_slender: undefined,
+          duty_dep_id: undefined,
+          duty_office_id: undefined,
+          duty_person: undefined,
+          occur_time: undefined,
+          number: undefined,
+          question_level: undefined,
+          question_origin: undefined,
+          title_status: undefined,
+          black_point: undefined,
+          question_description: undefined,
+          question_schedule: undefined,
+          attachment: undefined,
+        },
+        // 弹框标题
+        title: undefined,
+        //问题来源
+        originParams:{
+          pageNum: 'all'
+        },
+        originList: [],
+        //文件列表
+        fileList: [],
 
 
       }
@@ -318,8 +396,8 @@
       this.getBroadList();
       this.getDeptList();
       this.getQuestionList();
-      this.getPersonAll();
       this.getDeptAll();
+      this.getOriginList();
     },
     methods: {
       /*获取问题大类listAll*/
@@ -347,12 +425,6 @@
           AllDeptName = response.data
         })
       },
-      /*加载所有人员*/
-      getPersonAll(){
-        listUser(this.personAll).then(response => {
-          AllPersonName = response.data
-        })
-      },
       /*搜索提交*/
       handleQuery() {
         this.queryParams.pageNum = 1;
@@ -370,17 +442,33 @@
           this.loading=false;
         })
       },
-      /*新增*/
-      addQuestion(row){
-
+      /*问题来源*/
+      getOriginList(){
+        originList(this.originParams).then(response => {
+          this.originList = response.data
+        })
+      },
+      addPath(){
+        this.$router.push({path: '/quality/qualityone'});
       },
       /*删除*/
       deleteQuestion(row){
-
+        this.$confirm('是否确认删除名称为"' + row.question_title + '"的数据项?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function() {
+          return questionDelete(row.id);
+        }).then(() => {
+          this.getQuestionList();
+          this.msgSuccess("删除成功");
+        })
       },
       /*修改*/
       updateQuestion(row){
-
+        this.open = true;
+        this.title = '修改';
+        this.form = Object.assign({}, row)
       },
       /*导出*/
       handleExport(){
@@ -392,6 +480,58 @@
         this.single = selection.length!==1;
         this.multiple = !selection.length
       },
+      //附件上传校验
+      beforeUpload(file) {
+        const testFile = file.name.substring(file.name.lastIndexOf('.') + 1);
+        //限制文件格式
+        const type = (testFile === 'zip') || (testFile === 'rar') || (testFile === '7z') || (testFile === 'png') ||
+          (testFile === 'jpeg') || (testFile === 'bmp') || (testFile === 'jpg') || (testFile === 'docx') || (testFile === 'xlsx')
+          || (testFile === 'doc') || (testFile === 'xls') || (testFile === 'pptx') || (testFile === 'pdf') || (testFile === 'msg');
+        //限制文件大小
+        const size = file.size / 1024 / 1024 < 10;
+        if (!type) {
+          this.msgError('文件只能是zip,rar,7z,png,jpeg,bmp,jpg,docx,xlsx,doc,xls,pptx,pdf,msg格式!');
+        }
+        if (!size) {
+          this.msgWarning('文件大小不能超过10MB');
+        }
+        return type && size;
+      },
+      // 文件上传钩子
+      handleRemove(file, fileList) {
+        console.log(file, fileList);
+      },
+      handlePreview(file) {
+        console.log(file);
+      },
+      // 自定义文件上传
+      requestUpload(param) {
+        let formData = new FormData();
+        formData.append("file", param.file);
+        addSaveFile(formData).then(response => {
+          this.form.attachment = response.data.file_url;
+          if(response.msg === 'success'){
+            this.msgSuccess('上传成功!')
+          } else {
+            this.msgError('上传失败!')
+          }
+        })
+      },
+      //文件上传提交
+      submitUpload() {
+        this.$refs.upload.submit();
+      },
+      submitForm(){
+        questionUpdate(this.form).then(response => {
+          this.open=false;
+          if (response.msg === 'success'){
+            this.msgSuccess('修改成功');
+            this.getQuestionList();
+          }else{
+            this.msgError('修改失败');
+          }
+        })
+      }
     }
   }
 </script>

@@ -18,8 +18,8 @@
         </el-form-item>
         <el-form-item label="问题大类" prop="question_broad">
           <el-select v-model="form.question_broad" clearable size="small">
-            <el-option v-for="dict in question_broadOptions" :key="dict.id" :label="dict.question_name"
-                       :value="dict.id"/>
+            <el-option v-for="dict in question_broadOptions" :key="dict.question_name" :label="dict.question_name"
+                       :value="dict.question_name"/>
           </el-select>
         </el-form-item>
         <el-form-item label="问题细类" prop="question_slender">
@@ -275,6 +275,7 @@
             const cloneData = JSON.parse(JSON.stringify(this.form));
             questionAdd(cloneData).then(response => {
               this.msgSuccess("新增成功");
+              this.questionPath();
             });
           } else {
             console.log('error submit!!');
@@ -285,6 +286,10 @@
       resetForm(queryForm) {
         this.$refs[queryForm].resetFields();
       },
+      questionPath(){
+        this.$router.push({path: '/quality/questionList'});
+      }
+
     },
   };
 </script>
