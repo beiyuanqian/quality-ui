@@ -2,29 +2,21 @@
   <div class="app-container">
     <el-form :model="queryParams" ref="queryForm" v-show="showSearch" :inline="true">
       <el-row>
-        <el-col :span="4">
+        <el-col>
           <el-form-item label="问题主题" prop="question_title">
             <el-input v-model="queryParams.question_title" placeholder="请输入问题主题" clearable size="small"/>
           </el-form-item>
-        </el-col>
-        <el-col :span="4">
           <el-form-item label="机型类别" prop="machine_category">
             <el-input v-model="queryParams.machine_category"  placeholder="请输入机型类别" clearable size="small"></el-input>
           </el-form-item>
-        </el-col>
-        <el-col :span="4">
           <el-form-item label="问题描述" prop="question_description">
             <el-input v-model="queryParams.question_description" placeholder="请输入问题描述" clearable size="small"></el-input>
           </el-form-item>
-        </el-col>
-        <el-col :span="4">
           <el-form-item label="责任部门" prop="duty_dep_id">
             <el-select v-model="queryParams.duty_dep_id"  placeholder="请选择部门" size="small" @change="getOfficeList(queryParams.duty_dep_id)">
               <el-option v-for="item in deptList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
             </el-select>
           </el-form-item>
-        </el-col>
-        <el-col :span="4">
           <el-form-item label="责任科室" prop="duty_office_id">
             <el-select v-model="queryParams.duty_office_id" placeholder="请选择科室" size="small">
               <el-option v-for="item in officeList" :value="item.id" :label="item.deptName" :key="item.id" ></el-option>
@@ -33,32 +25,24 @@
         </el-col>
       </el-row>
       <el-row>
-        <el-col :span="4">
+        <el-col>
           <el-form-item label="责任人员" prop="duty_person">
             <el-input v-model="queryParams.duty_person" placeholder="请输入责任人" clearable size="small"></el-input>
           </el-form-item>
-        </el-col>
-        <el-col :span="4">
           <el-form-item label="问题大类" prop="question_broad">
             <el-select v-model="queryParams.question_broad" placeholder="请选择" clearable size="small">
               <el-option v-for="item in broadList" :value="item.question_name" :label="item.question_name" :key="item.question_name"></el-option>
             </el-select>
           </el-form-item>
-        </el-col>
-        <el-col :span="4">
           <el-form-item label="问题细类" prop="question_slender">
             <el-input v-model="queryParams.question_slender" placeholder="请选择" clearable size="small"></el-input>
           </el-form-item>
-        </el-col>
-        <el-col :span="4">
           <el-form-item label="是否关闭" prop="title_status">
             <el-radio-group v-model="queryParams.title_status">
               <el-radio label="是">是</el-radio>
               <el-radio label="否">否</el-radio>
             </el-radio-group>
           </el-form-item>
-        </el-col>
-        <el-col :span="5">
           <el-form-item label="发生时间" prop="occur_time">
             <el-date-picker v-model="queryParams.occur_time" size="small" clearable placeholder="选择日期"></el-date-picker>
           </el-form-item>
@@ -78,7 +62,7 @@
           icon="el-icon-plus"
           size="mini"
           @click="addPath"
-          v-hasPermi="['permission:role:post']"
+          v-hasPermi="['quality:question:post']"
         >新增</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -89,7 +73,7 @@
           size="mini"
           :disabled="single"
           @click="updateQuestion"
-          v-hasPermi="['permission:role:{id}:put']"
+          v-hasPermi="['quality:question:{id}:put']"
         >修改</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -100,7 +84,7 @@
           :disable="multiple"
           size="mini"
           @click="deleteQuestion"
-          v-hasPermi="['permission:role:{id}:delete']"
+          v-hasPermi="['quality:question:{id}:delete']"
         >删除</el-button>
       </el-col>
       <el-col :span="1.5">
@@ -125,14 +109,14 @@
         fixed
         width="200"
         class-name="small-padding fixed-width"
-        v-if="hasPermi(['permission:dept:{id}:put','permission:dept:post','permission:dept:{id}:delete'])"
+        v-if="hasPermi(['quality:question:{id}:put','quality:question:{id}:post','quality:question:{id}:delete'])"
       >
         <template slot-scope="scope">
           <el-button
             size="mini"
             type="text"
             icon="el-icon-edit"
-            v-hasPermi="['permission:dept:{id}:put']"
+            v-hasPermi="['quality:question:{id}:put']"
             @click="updateQuestion(scope.row)"
           >修改
           </el-button>
@@ -140,14 +124,14 @@
             size="mini"
             type="text"
             icon="el-icon-plus"
-            v-hasPermi="['permission:dept:post']"
+            v-hasPermi="['quality:question:post']"
           >复制
           </el-button>
           <el-button
             size="mini"
             type="text"
             icon="el-icon-delete"
-            v-hasPermi="['permission:dept:{id}:delete']"
+            v-hasPermi="['quality:question:{id}:delete']"
             @click="deleteQuestion(scope.row)"
           >删除
           </el-button>
@@ -388,6 +372,18 @@
         originList: [],
         //文件列表
         fileList: [],
+        // 表单校验
+        rules: {
+          question_title: [{required: true, message: '请输入活动主题', trigger: 'change'}],
+          duty_dep_id: [{required: true, message: '请选择责任部门', trigger: 'change'}],
+          duty_person: [{required: true, message: '请输入责任人', trigger: 'change'}],
+          occur_time: [{required: true, message: '请输入发生时间', trigger: 'change'}],
+          question_level: [{required: true, message: '请选择重要程度', trigger: 'change'}],
+          question_origin: [{required: true, message: '请选择问题来源', trigger: 'change'}],
+          title_status: [{required: true, message: '请选择关闭与否', trigger: 'change'}],
+          question_description: [{required: true, message: '请输入问题描述', trigger: 'change'}],
+          question_schedule: [{required: true, message: '请输入最新进度', trigger: 'change'}],
+        },
 
 
       }

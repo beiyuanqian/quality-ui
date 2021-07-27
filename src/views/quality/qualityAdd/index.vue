@@ -1,6 +1,5 @@
 <template>
   <div class="app-container">
-    <h3>售后问题管理新增</h3>
     <el-form :model="form" ref="queryForm" :inline="true" :rules="rules" :label-position="labelPosition"
              label-width="80px">
       <el-row>
@@ -22,17 +21,19 @@
                        :value="dict.question_name"/>
           </el-select>
         </el-form-item>
+      </el-row>
+      <el-row>
         <el-form-item label="问题细类" prop="question_slender">
           <el-input v-model="form.question_slender" clearable size="small" placeholder="请输入问题细类"/>
         </el-form-item>
         <el-form-item label="责任部门" prop="duty_dep_id">
-          <el-select v-model="form.duty_dep_id" clearable size="small" @change="getOfficeList(form.duty_dep_id)">
-            <el-option v-for="dict in duty_dep_idOptions" :key="dict.id" :label="dict.deptName" :value="dict.id"/>
+          <el-select v-model="form.duty_dep_id" size="small" placeholder="请选择" disabled>
+            <el-option  v-for="item in duty_dep_idOptions" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="责任科室" prop="duty_office_id">
-          <el-select v-model="form.duty_office_id" clearable size="small">
-            <el-option v-for="dict in duty_office_idOptions" :key="dict.id" :label="dict.deptName" :value="dict.id"/>
+          <el-select v-model="form.duty_office_id" size="small" placeholder="请选择" clearable>
+            <el-option  v-for="item in duty_office_idOptions" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="责任人" prop="duty_person">
@@ -41,6 +42,8 @@
         <el-form-item label="故障数量" prop="number">
           <el-input v-model="form.number" clearable size="small" placeholder="请输入数量"/>
         </el-form-item>
+      </el-row>
+      <el-row>
         <el-form-item label="发生时间" prop="occur_time">
           <el-date-picker v-model="form.occur_time" clearable type="date" placeholder="选择日期"></el-date-picker>
         </el-form-item>
@@ -106,6 +109,8 @@
   import {questionAdd} from '@/api/quality/question';
   import {addSaveFile} from "@/api/vadmin/system/savefile";
   import {getToken} from "@/utils/auth";
+  import {getUserProfile} from "@/api/vadmin/permission/user";
+  import {getDept} from "@/api/vadmin/permission/dept";
 
   export default {
     name: "Index",
@@ -144,30 +149,31 @@
         question_originOptions: [],
         //关闭与否树选项
         title_statusOptions: [
-          {value: '是', label: '是'},
           {value: '否', label: '否'},
+          {value: '是', label: '是'}
         ],
         //对齐方式
         labelPosition: 'right',
         // 表单参数
         form: {
-          question_title: '',
+          question_title: undefined,
           machine_category: undefined,
           machine_name: undefined,
           machine_num: undefined,
           question_broad: undefined,
           question_slender: undefined,
-          duty_dep_id: '',
+          duty_dep_id: undefined,
+          dutyDeptName: undefined,
           duty_office_id: undefined,
-          duty_person: '',
+          duty_person: undefined,
           occur_time: undefined,
           number: undefined,
-          question_level: '',
-          question_origin: '',
-          title_status: '',
+          question_level: undefined,
+          question_origin: undefined,
+          title_status: '否',
           black_point: undefined,
-          question_description: '',
-          question_schedule: '',
+          question_description: undefined,
+          question_schedule: undefined,
           attachment: undefined,
         },
         uploadFileUrl: process.env.VUE_APP_BASE_API + "/admin/system/savefile/", // 上传的图片服务器地址
@@ -190,9 +196,9 @@
     },
     created() {
       this.getBroadList();
-      this.getDeptList();
       this.getLevelList();
       this.getOriginList();
+      this.getUserInfo();
     },
     methods: {
       //获取问题来源
@@ -213,10 +219,11 @@
           this.question_broadOptions = response.data
         })
       },
-      //加载部门list
-      getDeptList() {
-        listDept(this.deptParams).then(response => {
-          this.duty_dep_idOptions = response.data
+      //获取部门信息列表
+      getDeptInfo(id){
+        getDept(id).then(response => {
+          this.form.duty_dep_id = response.data.id;
+          this.duty_dep_idOptions.push(response.data);
         })
       },
       //加载科室list
@@ -267,7 +274,25 @@
       submitUpload() {
         this.$refs.upload.submit();
       },
-
+      // 获取提交信息的用户个人信息
+      getUserInfo() {
+        getUserProfile().then(response => {
+          // 判断用户部门的parentId是否为根节点
+          if (response.data.dept.parentId === '' || response.data.dept.parentId === null){
+            this.form.duty_dep_id = response.data.dept.id;
+            this.duty_dep_idOptions.push(response.data.dept);
+            this.getOfficeList(response.data.dept.id)
+          }else if (response.data.dept.parentId === 1){
+            this.form.duty_dep_id = response.data.dept.id;
+            this.duty_dep_idOptions.push(response.data.dept);
+          } else{
+            // 获取部门信息
+            this.getDeptInfo(response.data.dept.parentId);
+            // 获取部门信息列表
+            this.getOfficeList(response.data.dept.parentId);
+          }
+        })
+      },
       //提交表单
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {

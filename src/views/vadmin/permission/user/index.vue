@@ -647,6 +647,8 @@
       submitForm: function() {
         this.$refs['form'].validate(valid => {
           if (valid) {
+            console.log('nihao');
+            console.log(JSON.stringify(this.form));
             if (this.form.id != undefined) {
               updateUser(this.form).then(response => {
                 this.msgSuccess('修改成功')
