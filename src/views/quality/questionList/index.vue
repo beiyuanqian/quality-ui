@@ -201,7 +201,7 @@
           </el-form-item>
           <el-form-item label="责任科室" prop="duty_dep_id">
             <el-select v-model="form.duty_office_id" size="small" placeholder="请选择责任科室" clearable>
-              <el-option v-for="item in deptList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+              <el-option v-for="item in officeList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="责任人" prop="duty_person">
@@ -445,7 +445,7 @@
         })
       },
       addPath(){
-        this.$router.push({path: '/quality/qualityone'});
+        this.$router.push({path: '/quality/qualityAdd'});
       },
       /*删除*/
       deleteQuestion(row){
@@ -492,7 +492,7 @@
           this.msgWarning('文件大小不能超过10MB');
         }
         return type && size;
-      },
+0      },
       // 文件上传钩子
       handleRemove(file, fileList) {
         console.log(file, fileList);
