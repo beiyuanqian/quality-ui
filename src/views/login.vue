@@ -69,8 +69,8 @@
       codeUrl: "",
       cookiePassword: "",
       loginForm: {
-        username: "admin",
-        password: "123456",
+        username: "",
+        password: "",
         rememberMe: false,
         code: "1",
         uuid: ""

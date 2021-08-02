@@ -9,6 +9,14 @@ export function listSaveFile(query) {
   })
 }
 
+//获取文件闲情
+export function getSaveFile(fileId) {
+  return request({
+    url: '/admin/system/savefile/' + fileId + '/',
+    method: 'get'
+  })
+}
+
 // 新增文件
 export function addSaveFile(data) {
   return request({

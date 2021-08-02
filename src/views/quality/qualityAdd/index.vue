@@ -28,12 +28,14 @@
         </el-form-item>
         <el-form-item label="责任部门" prop="duty_dep_id">
           <el-select v-model="form.duty_dep_id" size="small" placeholder="请选择" disabled>
-            <el-option  v-for="item in duty_dep_idOptions" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+            <el-option v-for="item in duty_dep_idOptions" :value="item.id" :label="item.deptName"
+                       :key="item.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="责任科室" prop="duty_office_id">
           <el-select v-model="form.duty_office_id" size="small" placeholder="请选择" clearable>
-            <el-option  v-for="item in duty_office_idOptions" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+            <el-option v-for="item in duty_office_idOptions" :value="item.id" :label="item.deptName"
+                       :key="item.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="责任人" prop="duty_person">
@@ -82,20 +84,34 @@
       </el-row>
       <el-row>
         <el-form-item label="添加附件" prop="attachment">
-          <el-upload class="upload-demo" ref="upload" :file-list="fileList" :http-request="requestUpload"
+          <el-upload class="upload-demo" :limit="1" ref="upload" :file-list="fileList" :http-request="requestUpload"
                      :on-preview="handlePreview" :on-remove="handleRemove" :auto-upload="false" action="">
             <template #trigger>
               <el-button size="small" type="primary">选取文件</el-button>
             </template>
             <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
           </el-upload>
-          <el-input v-model="form.attachment" type="hidden"></el-input>
+        </el-form-item>
+      </el-row>
+      <el-row>
+        <el-form-item label="发送邮箱" prop="userEmail">
+          <el-select style="width:900px;" v-model="form.userEmail" size="small" placeholder="请选择用户邮箱" multiple clearable>
+            <el-option v-for="item in userList" v-if="item.email" :value="item.email" :label="item.email" :key="item.id"></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="抄送邮箱" prop="emailList">
+          <el-input style="width: 900px" v-model="form.emailList" size="small" placeholder="请输入邮箱号,多个邮箱号请用英文逗号隔开"
+                    clearable></el-input>
         </el-form-item>
       </el-row>
       <el-form-item>
         <div style="margin: 0 500px;"></div>
         <el-button type="primary" @click="onSubmit('queryForm')">提交</el-button>
-        <el-button @click="resetForm('queryForm')">取消</el-button>
+        <el-button @click="resetForm('queryForm')">重置</el-button>
+      </el-form-item>
+      <el-form-item>
+        <el-input v-model="form.attachment" type="hidden"></el-input>
+        <el-input v-model="form.attachmentName" type="hidden"></el-input>
       </el-form-item>
     </el-form>
   </div>
@@ -108,13 +124,27 @@
   import {originList} from '@/api/quality/origin';
   import {questionAdd} from '@/api/quality/question';
   import {addSaveFile} from "@/api/vadmin/system/savefile";
-  import {getToken} from "@/utils/auth";
-  import {getUserProfile} from "@/api/vadmin/permission/user";
+  import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept} from "@/api/vadmin/permission/dept";
+  import {validEmails, isInteger} from "@/utils/validate";
 
   export default {
     name: "Index",
     data() {
+      const checkEmail = (rule, value, callback) => {
+        if (!validEmails(value)) {
+          return callback(new Error('邮箱格式不正确'))
+        } else {
+          callback();
+        }
+      };
+      const checkInteger = (rule, value , callbacke) => {
+       if (!isInteger(value)){
+         return callbacke(new Error('请输入正正数'))
+       } else{
+         callbacke();
+       }
+      };
       return {
         // 遮罩层
         loading: true,
@@ -154,6 +184,8 @@
         ],
         //对齐方式
         labelPosition: 'right',
+        //全部用户信息列表
+        userList: [],
         // 表单参数
         form: {
           question_title: undefined,
@@ -175,14 +207,15 @@
           question_description: undefined,
           question_schedule: undefined,
           attachment: undefined,
-        },
-        uploadFileUrl: process.env.VUE_APP_BASE_API + "/admin/system/savefile/", // 上传的图片服务器地址
-        headers: {
-          Authorization: "Bearer " + getToken(),
+          attachmentName: undefined,
+          // 填写的邮箱号
+          emailList: undefined,
+          // 用户邮箱
+          userEmail: [],
         },
         // 表单校验
         rules: {
-          question_title: [{required: true, message: '请输入活动主题', trigger: 'change'}],
+          question_title: [{required: true, message: '请输入问题主题', trigger: 'change'}],
           duty_dep_id: [{required: true, message: '请选择责任部门', trigger: 'change'}],
           duty_person: [{required: true, message: '请输入责任人', trigger: 'change'}],
           occur_time: [{required: true, message: '请输入发生时间', trigger: 'change'}],
@@ -191,14 +224,18 @@
           title_status: [{required: true, message: '请选择关闭与否', trigger: 'change'}],
           question_description: [{required: true, message: '请输入问题描述', trigger: 'change'}],
           question_schedule: [{required: true, message: '请输入最新进度', trigger: 'change'}],
+          emailList: [{ validator:checkEmail, trigger: 'change'}],
+          number: [{validator: checkInteger, trigger: 'change'}],
+          machine_num: [{validator: checkInteger, trigger: 'change'}]
         },
-      };
+      }
     },
     created() {
       this.getBroadList();
       this.getLevelList();
       this.getOriginList();
       this.getUserInfo();
+      this.getUserList();
     },
     methods: {
       //获取问题来源
@@ -220,7 +257,7 @@
         })
       },
       //获取部门信息列表
-      getDeptInfo(id){
+      getDeptInfo(id) {
         getDept(id).then(response => {
           this.form.duty_dep_id = response.data.id;
           this.duty_dep_idOptions.push(response.data);
@@ -231,6 +268,12 @@
         this.deptParams.parentId = officeId;
         listDept(this.deptParams).then(response => {
           this.duty_office_idOptions = response.data
+        })
+      },
+      //加载全部人员信息
+      getUserList(){
+        listUser(this.levelParams).then(response => {
+          this.userList = response.data;
         })
       },
       //附件上传校验
@@ -262,9 +305,10 @@
         let formData = new FormData();
         formData.append("file", param.file);
         addSaveFile(formData).then(response => {
-          this.form.attachment = response.data.file_url;
-          if(response.msg === 'success'){
-            this.msgSuccess('上传成功!')
+          this.form.attachment = response.data.id;
+          this.form.attachmentName = response.data.name;
+          if (response.msg === 'success') {
+            this.msgSuccess('上传成功!');
           } else {
             this.msgError('上传失败!')
           }
@@ -274,18 +318,19 @@
       submitUpload() {
         this.$refs.upload.submit();
       },
-      // 获取提交信息的用户个人信息
+      // 获取用户个人信息
       getUserInfo() {
         getUserProfile().then(response => {
+          this.form.userEmail.push(response.data.email);
           // 判断用户部门的parentId是否为根节点
-          if (response.data.dept.parentId === '' || response.data.dept.parentId === null){
+          if (response.data.dept.parentId === '' || response.data.dept.parentId === null) {
             this.form.duty_dep_id = response.data.dept.id;
             this.duty_dep_idOptions.push(response.data.dept);
             this.getOfficeList(response.data.dept.id)
-          }else if (response.data.dept.parentId === 1){
+          } else if (response.data.dept.parentId === 1) {
             this.form.duty_dep_id = response.data.dept.id;
             this.duty_dep_idOptions.push(response.data.dept);
-          } else{
+          } else {
             // 获取部门信息
             this.getDeptInfo(response.data.dept.parentId);
             // 获取部门信息列表
@@ -296,23 +341,30 @@
       //提交表单
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {
+          // 问题新增提交
           if (valid) {
             const cloneData = JSON.parse(JSON.stringify(this.form));
+            //邮箱拼接
+            const Email = cloneData.userEmail.concat(cloneData.emailList.split(','));
             questionAdd(cloneData).then(response => {
               this.msgSuccess("新增成功");
-              this.questionPath();
+              //跳转至显示页面
+              this.questionPath(response.data.id, Email);
             });
           } else {
             console.log('error submit!!');
           }
         });
+        this.$refs[queryForm].resetFields();
+        this.getUserInfo();
       },
       //点击取消重置表单内容
       resetForm(queryForm) {
         this.$refs[queryForm].resetFields();
+        this.getUserInfo();
       },
-      questionPath(){
-        this.$router.push({path: '/quality/questionList'});
+      questionPath(questionId, emailList) {
+        this.$router.push({path: '/quality/questionList', query: { questionId: questionId, emailList: emailList }});
       }
 
     },

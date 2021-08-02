@@ -61,14 +61,29 @@ export function validEmail(email) {
 }
 
 /**
+ * @param {string} emails
+ * @returns {Boolean}
+ */
+export function validEmails(emails) {
+  const reg= /^([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4})(,([A-Za-z0-9_\-\.])+\@([A-Za-z0-9_\-\.])+\.([A-Za-z]{2,4}))*$/;
+  return reg.test(emails)
+}
+
+/**
  * @param {string} str
  * @returns {Boolean}
  */
 export function isString(str) {
-  if (typeof str === 'string' || str instanceof String) {
-    return true
-  }
-  return false
+  return typeof str === 'string' || str instanceof String;
+}
+
+/**
+ * @param {string} str
+ * @returns {Boolean}
+ */
+export function isInteger(str) {
+  const reg = /^[0-9]*[1-9][0-9]*$/;
+  return reg.test(str)
 }
 
 /**
