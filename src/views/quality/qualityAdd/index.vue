@@ -95,7 +95,7 @@
       </el-row>
       <el-row>
         <el-form-item label="发送邮箱" prop="userEmail">
-          <el-select style="width:900px;" v-model="form.userEmail" size="small" placeholder="请选择用户邮箱" multiple clearable>
+          <el-select style="width:900px;" v-model="form.userEmail" size="small" placeholder="请选择用户邮箱" multiple filterable  clearable>
             <el-option v-for="item in userList" v-if="item.email" :value="item.email" :label="item.email" :key="item.id"></el-option>
           </el-select>
         </el-form-item>
