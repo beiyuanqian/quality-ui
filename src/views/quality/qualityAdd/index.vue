@@ -138,11 +138,11 @@
           callback();
         }
       };
-      const checkInteger = (rule, value , callbacke) => {
+      const checkInteger = (rule, value , callback) => {
        if (!isInteger(value)){
-         return callbacke(new Error('请输入正正数'))
+         return callback(new Error('请输入正整数'))
        } else{
-         callbacke();
+         callback();
        }
       };
       return {
