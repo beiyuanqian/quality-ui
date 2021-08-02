@@ -43,3 +43,18 @@ export function questionDelete(questionId) {
   })
 
 }
+
+//邮件发送
+export function sendEmail(questionId, receiveList, href) {
+  const data = {
+    questionId,
+    receiveList,
+    href
+  };
+  return request({
+    url: '/quality/question/sendEmail/',
+    method: 'put',
+    data: data
+  })
+
+}
