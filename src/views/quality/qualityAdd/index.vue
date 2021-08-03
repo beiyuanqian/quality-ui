@@ -132,18 +132,26 @@
     name: "Index",
     data() {
       const checkEmail = (rule, value, callback) => {
-        if (!validEmails(value)) {
-          return callback(new Error('邮箱格式不正确'))
-        } else {
+        if (value === '' || value === undefined || value === null){
           callback();
+        } else{
+          if (!validEmails(value)) {
+            return callback(new Error('邮箱格式不正确'))
+          } else {
+            callback();
+          }
         }
       };
       const checkInteger = (rule, value , callback) => {
-       if (!isInteger(value)){
-         return callback(new Error('请输入正整数'))
-       } else{
-         callback();
-       }
+        if (value === '' || value === undefined || value === null){
+          callback();
+        }else {
+          if (!isInteger(value)){
+            return callback(new Error('请输入正整数'))
+          } else{
+            callback();
+          }
+        }
       };
       return {
         // 遮罩层
@@ -209,7 +217,7 @@
           attachment: undefined,
           attachmentName: undefined,
           // 填写的邮箱号
-          emailList: undefined,
+          emailList: '',
           // 用户邮箱
           userEmail: [],
         },
@@ -321,6 +329,7 @@
       // 获取用户个人信息
       getUserInfo() {
         getUserProfile().then(response => {
+          this.form.userEmail = [];
           this.form.userEmail.push(response.data.email);
           // 判断用户部门的parentId是否为根节点
           if (response.data.dept.parentId === '' || response.data.dept.parentId === null) {
@@ -345,9 +354,11 @@
           if (valid) {
             const cloneData = JSON.parse(JSON.stringify(this.form));
             //邮箱拼接
-            const Email = cloneData.userEmail.concat(cloneData.emailList.split(','));
+            const Email = cloneData.userEmail;
+            Email.concat(cloneData.emailList.split(','));
             questionAdd(cloneData).then(response => {
               this.msgSuccess("新增成功");
+              this.$refs[queryForm].resetFields();
               //跳转至显示页面
               this.questionPath(response.data.id, Email);
             });
@@ -355,8 +366,8 @@
             console.log('error submit!!');
           }
         });
-        this.$refs[queryForm].resetFields();
-        this.getUserInfo();
+
+        // this.getUserInfo();
       },
       //点击取消重置表单内容
       resetForm(queryForm) {
