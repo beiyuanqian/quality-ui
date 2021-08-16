@@ -6,7 +6,7 @@ function resolve(dir) {
   return path.join(__dirname, dir)
 }
 
-const name = defaultSettings.title || process.env.VUE_APP_TITLE || 'dvAdmin管理系统' // 标题
+const name = defaultSettings.title || process.env.VUE_APP_TITLE || '联云质量管理平台' // 标题
 const port = process.env.port || process.env.npm_config_port || 80 // 端口
 
 // vue.config.js 配置说明

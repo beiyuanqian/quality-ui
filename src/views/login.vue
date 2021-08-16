@@ -65,7 +65,7 @@
   name: "Login",
   data() {
     return {
-      title: process.env.VUE_APP_TITLE || 'dvAdmin管理系统',
+      title: process.env.VUE_APP_TITLE || '联云质量管理平台',
       codeUrl: "",
       cookiePassword: "",
       loginForm: {

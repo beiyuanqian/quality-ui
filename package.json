@@ -1,7 +1,7 @@
 {
   "name": "dvadmin",
   "version": "1.1.0",
-  "description": "dvAdmin管理系统",
+  "description": "联云质量管理平台",
   "author": "dvAdmin",
   "license": "MIT",
   "scripts": {

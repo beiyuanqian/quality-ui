@@ -42,3 +42,13 @@ export function clearSaveFile() {
     method: 'post'
   })
 }
+
+// 自定义下载文件
+export function downloadFile(data) {
+  return request({
+    url: '/admin/system/savefile/downloadFile/',
+    method: 'post',
+    data: data,
+    responseType: 'blob'
+  })
+}

@@ -6,7 +6,7 @@
         <el-form-item label="问题主题" prop="question_title">
           <el-input v-model="form.question_title" clearable size="small" placeholder="请输入问题主题"/>
         </el-form-item>
-        <el-form-item label="机型类型" prop="machine_category">
+        <el-form-item label="机型类别" prop="machine_category">
           <el-input v-model="form.machine_category" clearable size="small" placeholder="请输入机型类型"/>
         </el-form-item>
         <el-form-item label="机型名称" prop="machine_name">
@@ -21,8 +21,6 @@
                        :value="dict.question_name"/>
           </el-select>
         </el-form-item>
-      </el-row>
-      <el-row>
         <el-form-item label="问题细类" prop="question_slender">
           <el-input v-model="form.question_slender" clearable size="small" placeholder="请输入问题细类"/>
         </el-form-item>
@@ -44,10 +42,8 @@
         <el-form-item label="故障数量" prop="number">
           <el-input v-model="form.number" clearable size="small" placeholder="请输入数量"/>
         </el-form-item>
-      </el-row>
-      <el-row>
         <el-form-item label="发生时间" prop="occur_time">
-          <el-date-picker v-model="form.occur_time" clearable type="date" placeholder="选择日期"></el-date-picker>
+          <el-date-picker v-model="form.occur_time" clearable type="date" style="width: 188px" size="small" :picker-options="pickerOptions" placeholder="选择日期"></el-date-picker>
         </el-form-item>
         <el-form-item label="重要程度" prop="question_level">
           <el-select v-model="form.question_level" clearable size="small">
@@ -83,24 +79,25 @@
         </el-form-item>
       </el-row>
       <el-row>
-        <el-form-item label="添加附件" prop="attachment">
-          <el-upload class="upload-demo" :limit="1" ref="upload" :file-list="fileList" :http-request="requestUpload"
-                     :on-preview="handlePreview" :on-remove="handleRemove" :auto-upload="false" action="">
-            <template #trigger>
-              <el-button size="small" type="primary">选取文件</el-button>
-            </template>
-            <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
-          </el-upload>
-        </el-form-item>
+          <el-form-item label="添加附件" prop="attachment">
+            <el-upload class="upload-demo" :limit="1" ref="upload" :file-list="fileList" :http-request="requestUpload"
+                       :on-preview="handlePreview" :on-remove="handleRemove" :before-upload="beforeUpload" :auto-upload="false" action="">
+              <template #trigger>
+                <el-button size="small" type="primary">选取文件</el-button>
+              </template>
+              <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
+              <div slot="tip" class="el-upload__tip">文件只能是zip,rar,7z,png,jpeg,bmp,jpg,docx,xlsx,doc,xls,pptx,pdf,msg格式，且不超过500kb</div>
+            </el-upload>
+          </el-form-item>
       </el-row>
       <el-row>
-        <el-form-item label="发送邮箱" prop="userEmail">
-          <el-select style="width:900px;" v-model="form.userEmail" size="small" placeholder="请选择用户邮箱" multiple filterable  clearable>
-            <el-option v-for="item in userList" v-if="item.email" :value="item.email" :label="item.email" :key="item.id"></el-option>
+        <el-form-item label="发送邮箱" prop='emailList'>
+          <el-select style="width:900px;" v-model="form.emailList" size="small" placeholder="请选择用户邮箱" multiple filterable  clearable>
+            <el-option v-for="item in userList" v-if="item.email" :value="item.email" :label="`${item.name}(${item.email})`" :key="item.id"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="抄送邮箱" prop="emailList">
-          <el-input style="width: 900px" v-model="form.emailList" size="small" placeholder="请输入邮箱号,多个邮箱号请用英文逗号隔开"
+        <el-form-item label="抄送邮箱" prop="otherEmail">
+          <el-input style="width: 900px" v-model="form.otherEmail" size="small" placeholder="请输入邮箱号,多个邮箱号请用英文逗号隔开"
                     clearable></el-input>
         </el-form-item>
       </el-row>
@@ -177,6 +174,12 @@
         levelParams: {
           pageNum: 'all'
         },
+        //日期禁用
+        pickerOptions: {
+          disabledDate(time) {
+            return time.getTime() > Date.now();
+          }
+        },
         //重要程度树选项
         question_levelOptions: [],
         //问题来源提交
@@ -217,9 +220,9 @@
           attachment: undefined,
           attachmentName: undefined,
           // 填写的邮箱号
-          emailList: '',
+          emailList: undefined,
           // 用户邮箱
-          userEmail: [],
+          otherEmail: '',
         },
         // 表单校验
         rules: {
@@ -232,7 +235,7 @@
           title_status: [{required: true, message: '请选择关闭与否', trigger: 'change'}],
           question_description: [{required: true, message: '请输入问题描述', trigger: 'change'}],
           question_schedule: [{required: true, message: '请输入最新进度', trigger: 'change'}],
-          emailList: [{ validator:checkEmail, trigger: 'change'}],
+          otherEmail: [{ validator:checkEmail, trigger: 'change'}],
           number: [{validator: checkInteger, trigger: 'change'}],
           machine_num: [{validator: checkInteger, trigger: 'change'}]
         },
@@ -329,8 +332,7 @@
       // 获取用户个人信息
       getUserInfo() {
         getUserProfile().then(response => {
-          this.form.userEmail = [];
-          this.form.userEmail.push(response.data.email);
+          this.form.emailList = response.data.email.split(',');
           // 判断用户部门的parentId是否为根节点
           if (response.data.dept.parentId === '' || response.data.dept.parentId === null) {
             this.form.duty_dep_id = response.data.dept.id;
@@ -352,30 +354,42 @@
         this.$refs[queryForm].validate((valid) => {
           // 问题新增提交
           if (valid) {
-            const cloneData = JSON.parse(JSON.stringify(this.form));
-            //邮箱拼接
-            const Email = cloneData.userEmail;
-            Email.concat(cloneData.emailList.split(','));
-            questionAdd(cloneData).then(response => {
+            //邮箱进行判空处理
+            let allEmail = [];
+            if(this.form.emailList.length > 0 && this.form.otherEmail !== ''){
+              const Email = this.form.emailList;
+              const otherEmail = this.form.otherEmail.split(',');
+              allEmail = Email.concat(otherEmail);
+              //将数组数据转换成字符串数据
+              this.form.emailList = this.form.emailList.join(',');
+            } else if (this.form.emailList.length > 0 && this.form.otherEmail === ''){
+              allEmail = this.form.emailList;
+              //将数组数据转换成字符串数据
+              this.form.emailList = this.form.emailList.join(',');
+            } else if (this.form.emailList <= 0 && this.form.otherEmail!== ''){
+              allEmail = this.form.otherEmail.split(',');
+            } else {
+              this.form.otherEmail = undefined;
+              this.form.emailList = undefined;
+            }
+            questionAdd(this.form).then(response => {
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
               //跳转至显示页面
-              this.questionPath(response.data.id, Email);
+              this.questionPath(response.data.id, allEmail);
             });
           } else {
             console.log('error submit!!');
           }
         });
-
-        // this.getUserInfo();
       },
       //点击取消重置表单内容
       resetForm(queryForm) {
         this.$refs[queryForm].resetFields();
         this.getUserInfo();
       },
-      questionPath(questionId, emailList) {
-        this.$router.push({path: '/quality/questionList', query: { questionId: questionId, emailList: emailList }});
+      questionPath(questionId, allEmail) {
+        this.$router.push({name: 'Questionlist', params: { questionId: questionId, allEmail: allEmail }});
       }
 
     },

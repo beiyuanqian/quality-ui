@@ -485,6 +485,7 @@
           ],
           email: [
             {
+              required: true,
               type: 'email',
               message: '\'请输入正确的邮箱地址',
               trigger: ['blur', 'change']
@@ -577,7 +578,7 @@
           mobile: undefined,
           email: undefined,
           gender: undefined,
-          is_active: false,
+          is_active: true,
           remark: undefined,
           postIds: [],
           roleIds: []
