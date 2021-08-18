@@ -162,7 +162,7 @@
                   {{scope.$index + 1}}
                 </template>
               </el-table-column>
-              <el-table-column prop="wuliaocode" label="物料代码" >
+              <el-table-column prop="wuliaocode" label="物料代码" >123
                 <template slot-scope="scope">
                   <el-input v-model="scope.row.wuliaocode" size="small"></el-input>
                 </template>
