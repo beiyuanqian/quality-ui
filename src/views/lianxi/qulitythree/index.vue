@@ -93,7 +93,6 @@
           icon="el-icon-download"
           size="mini"
           @click="handleExport"
-          v-hasPermi="[]"
         >导出</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getQuestionList"></right-toolbar>
@@ -117,14 +116,22 @@
             icon="el-icon-edit"
             v-hasPermi="['quality:question:{id}:put']"
             @click="updateQuestion(scope.row)"
-          >修改
+          >更新
           </el-button>
+          <!-- <el-button
+             size="mini"
+             type="text"
+             icon="el-icon-plus"
+             v-hasPermi="['quality:question:post']"
+           >复制
+           </el-button>-->
           <el-button
             size="mini"
             type="text"
-            icon="el-icon-plus"
-            v-hasPermi="['quality:question:post']"
-          >复制
+            icon="el-icon-view"
+            v-hasPermi="['quality:question:get']"
+            @click="lookQuestion(scope.row)"
+          >详情
           </el-button>
           <el-button
             size="mini"
@@ -154,7 +161,9 @@
       </el-table-column>
       <el-table-column prop="duty_person" label="责任人" width="150"></el-table-column>
       <el-table-column prop="question_origin" label="问题来源" width="150"></el-table-column>
-      <el-table-column prop="question_description" label="问题描述" width="200"></el-table-column>
+      <el-table-column prop="question_description" label="问题描述" width="200" show-overflow-tooltip></el-table-column>
+      <el-table-column prop="question_schedule" label="整改进度" width="200" show-overflow-tooltip></el-table-column>
+      <el-table-column prop="attachmentName" label="附件" width="200"></el-table-column>
     </el-table>
 
     <pagination
@@ -212,10 +221,9 @@
             <el-input v-model="form.number" size="small" placeholder="请输入故障数量" clearable></el-input>
           </el-form-item>
           <el-form-item label="重要程度" prop="question_level">
-            <el-select v-model="form.question_level" size="small" placeholder="请选择严重程度" clearable>
-              <el-option label="一般" value="一般"></el-option>
-              <el-option label="重要" value="重要"></el-option>
-              <el-option label="非常重要" value="非常重要"></el-option>
+            <el-select v-model="form.question_level" clearable size="small">
+              <el-option v-for="dict in question_levelOptions" :key="dict.question_level" :label="dict.question_level"
+                         :value="dict.question_level"/>
             </el-select>
           </el-form-item>
           <el-form-item label="发送时间" prop="occur_time">
@@ -249,6 +257,17 @@
           </el-form-item>
         </el-row>
         <el-row>
+          <el-form-item label="发送邮箱" prop="userEmail">
+            <el-select style="width:800px;" v-model="form.userEmail" size="small" placeholder="请选择用户邮箱" multiple filterable  clearable>
+              <el-option v-for="item in userList" v-if="item.email" :value="item.email" :label="item.email" :key="item.id"></el-option>
+            </el-select>
+          </el-form-item>
+          <el-form-item label="抄送邮箱" prop="emailList">
+            <el-input style="width: 800px" v-model="form.emailList" size="small" placeholder="请输入邮箱号,多个邮箱号请用英文逗号隔开"
+                      clearable></el-input>
+          </el-form-item>
+        </el-row>
+        <el-row>
           <el-form-item label="添加附件" prop="attachment">
             <el-upload class="upload-demo" ref="upload" :file-list="fileList" :http-request="requestUpload"
                        :on-preview="handlePreview" :on-remove="handleRemove" :auto-upload="false" action="">
@@ -256,28 +275,147 @@
                 <el-button size="small" type="primary">选取文件</el-button>
               </template>
               <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
+              <el-input v-model="form.attachment" type="hidden"></el-input>
+              <el-input v-model="form.attachmentName" type="hidden"></el-input>
             </el-upload>
-            <el-input v-model="form.attachment" type="hidden"></el-input>
+
           </el-form-item>
         </el-row>
       </el-form>
       <div slot="footer" class="dialog-footer">
         <el-button type="primary" @click="submitForm">确 定</el-button>
-        <el-button @click="resetForm">取 消</el-button>
+        <el-button @click="resetForm('form')">取 消</el-button>
       </div>
     </el-dialog>
+
+    <!--查看详情框-->
+    <el-dialog title="查看详情" :visible.sync="seeOpen" append-to-body>
+      <el-form ref="form" :model="form">
+        <table style="width: 100%;border-collapse: collapse">
+          <tr>
+            <td v-model="form.question_title">
+              <span style="font-size: 15px;font-weight: bold;">问题主题：</span>
+              {{form.question_title}}</td>
+            <td v-model="form.machine_category">
+              <span style="font-size: 15px;font-weight: bold;">机器类型：</span>
+              {{form.machine_category}}</td>
+            <td v-model="form.machine_name" >
+              <span style="font-size: 15px;font-weight: bold;">机器名称：</span>
+              {{form.machine_name}}</td>
+          </tr>
+          <tr>
+            <td v-model="form.machine_num">
+              <span style="font-size: 15px;font-weight: bold;">涉及台数：</span>
+              {{form.machine_num}}
+            </td>
+            <td v-model="form.question_broad">
+              <span style="font-size: 15px;font-weight: bold;">问题大类：</span>
+              {{form.question_broad}}
+            </td>
+            <td v-model="form.question_slender">
+              <span style="font-size: 15px;font-weight: bold;">问题细类：</span>
+              {{form.question_slender}}
+            </td>
+          </tr>
+          <tr>
+            <td v-model="form.duty_dep_id">
+              <span style="font-size: 15px;font-weight: bold;">
+                责任部门：{{form.duty_dep_id}}
+                <el-option v-for="item in deptList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+              </span>
+
+                <!--el-select v-model="form.duty_dep_id" size="small" placeholder="请选择责任部门" disabled>
+                  <el-option v-for="item in deptList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+                </el-select>
+
+              <el-form-item label="责任科室" prop="duty_office_id">
+                <el-select v-model="form.duty_office_id" size="small" placeholder="请选择责任科室" disabled>
+                  <el-option v-for="item in officeList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+                </el-select>
+              </el-form-item>
+              <el-form-item label="责任人" prop="duty_person">
+                <el-input v-model="form.duty_person" size="small" placeholder="请输入责任人" disabled></el-input>
+              </el-form-item-->
+
+
+            </td>
+            <td v-model="form.duty_office_id">
+              <span style="font-size: 15px;font-weight: bold;">责任科室：</span>
+              {{form.duty_office_id}}
+            </td>
+            <td v-model="form.duty_person">
+              <span style="font-size: 15px;font-weight: bold;">责任人：</span>
+              {{form.duty_person}}
+            </td>
+          </tr>
+          <tr>
+            <td v-model="form.number">
+              <span style="font-size: 15px;font-weight: bold;">故障数量：</span>
+              {{form.number}}
+            </td>
+            <td v-model="form.question_level">
+              <span style="font-size: 15px;font-weight: bold;">重要程度：</span>
+              {{form.question_level}}
+            </td>
+            <td v-model="form.occur_time">
+              <span style="font-size: 15px;font-weight: bold;">发生时间：</span>
+              {{form.occur_time}}
+            </td>
+          </tr>
+          <tr>
+            <td v-model="form.question_origin">
+              <span style="font-size: 15px;font-weight: bold;">问题来源：</span>
+              {{form.question_origin}}
+            </td>
+            <td v-model="form.title_status">
+              <span style="font-size: 15px;font-weight: bold;">关闭与否：</span>
+              {{form.title_status}}
+            </td>
+            <td v-model="form.black_point">
+              <span style="font-size: 15px;font-weight: bold;">黑点：</span>
+              {{form.black_point}}
+            </td>
+          </tr>
+          <tr>
+            <td v-model="form.question_description" colspan="3">
+              <span style="font-size: 15px;font-weight: bold;">问题描述：</span>
+              {{form.question_description}}
+            </td>
+          </tr>
+          <tr>
+            <td v-model="form.question_schedule" colspan="3">
+              <span style="font-size: 15px;font-weight: bold;">最新进度：</span>
+              {{form.question_schedule}}
+            </td>
+          </tr>
+          <tr>
+            <td v-model="form.attachmentName" colspan="3">
+              <span style="font-size: 15px;font-weight: bold;">附件名称：</span>
+              {{form.attachmentName}}
+            </td>
+          </tr>
+        </table>
+      </el-form>
+
+      <div slot="footer" class="dialog-footer">
+        <el-button @click="seeCancel('form')">关闭</el-button>
+      </div>
+    </el-dialog>
+
   </div>
 </template>
 
 <script>
   import {broadList} from '@/api/quality/broad';
+  import {levelList} from '@/api/quality/level';
   import {listDept} from '@/api/vadmin/permission/dept';
-  import {questionAdd,questionList, questionUpdate, questionDelete} from '@/api/quality/question';
+  import {questionAdd,questionList, questionUpdate, questionDelete,sendEmail} from '@/api/quality/question';
   import {originList} from '@/api/quality/origin';
-  import {addSaveFile} from "@/api/vadmin/system/savefile";
+  import {addSaveFile,getSaveFile} from "@/api/vadmin/system/savefile";
+  import {getUserProfile,listUser} from "@/api/vadmin/permission/user";
   import {getDept} from "@/api/vadmin/permission/dept";
-  import {getUserProfile} from "@/api/vadmin/permission/user";
-  import {clearSaveFile, delSaveFile, listSaveFile} from "@/api/vadmin/system/savefile";
+  import {validEmails, isInteger} from "@/utils/validate";
+
 
   let AllDeptName = [];
   // let AllPersonName = [];
@@ -291,6 +429,24 @@
       }
     },
     data() {
+      const checkEmail = (rule, value, callback) => {
+        if (value === '' || value === undefined || value === null){
+          callback();
+        } else{
+          if (!validEmails(value)) {
+            return callback(new Error('邮箱格式不正确'))
+          } else {
+            callback();
+          }
+        }
+      };
+      const checkInteger = (rule, value , callbacke) => {
+        if (!isInteger(value)){
+          return callbacke(new Error('请输入正正数'))
+        } else{
+          callbacke();
+        }
+      };
       return{
         //遮罩层
         loading: true,
@@ -317,6 +473,9 @@
           pageNum: 1,
           pageSize: 10,
         },
+        officeParams:{
+          parentId: undefined,
+        },
         // 问题大类提交
         broadParams:{
           pageNum: 'all'
@@ -339,6 +498,8 @@
         deptList: [],
         // 科室List
         officeList: [],
+        // 科室ListUpdate
+        officeListUpdate: [],
         //关闭与否树选项
         title_statusOptions: [
           {value: '否', label: '否'},
@@ -347,6 +508,9 @@
         // 售后问题List
         questionList: [],
         open: false,
+        seeOpen: false,
+        //全部用户信息列表
+        userList: [],
         // 修改提交参数
         form: {
           id: undefined,
@@ -368,6 +532,11 @@
           question_description: undefined,
           question_schedule: undefined,
           attachment: undefined,
+          attachmentName: undefined,
+          // 填写的邮箱号
+          emailList: '',
+          // 用户邮箱
+          userEmail: [],
         },
         // 弹框标题
         title: undefined,
@@ -376,6 +545,12 @@
           pageNum: 'all'
         },
         originList: [],
+        //重要程度提交
+        levelParams: {
+          pageNum: 'all'
+        },
+        //重要程度树选项
+        question_levelOptions: [],
         //文件列表
         fileList: [],
         // 表单校验
@@ -389,6 +564,9 @@
           title_status: [{required: true, message: '请选择关闭与否', trigger: 'change'}],
           question_description: [{required: true, message: '请输入问题描述', trigger: 'change'}],
           question_schedule: [{required: true, message: '请输入最新进度', trigger: 'change'}],
+          emailList: [{ validator:checkEmail, trigger: 'change'}],
+          number: [{validator: checkInteger, trigger: 'change'}],
+          machine_num: [{validator: checkInteger, trigger: 'change'}]
         },
 
 
@@ -400,8 +578,15 @@
       this.getQuestionList();
       this.getDeptAll();
       this.getOriginList();
+      this.emailJudge();
     },
     methods: {
+      // 获取重要程度
+      getLevelList() {
+        levelList(this.levelParams).then(response => {
+          this.question_levelOptions = response.data
+        })
+      },
       /*获取问题大类listAll*/
       getBroadList(){
         broadList(this.broadParams).then(response => {
@@ -414,6 +599,13 @@
           this.deptList = response.data
         })
       },
+      //获取部门信息列表
+      getDeptInfo(id) {
+        getDept(id).then(response => {
+          this.form.duty_dep_id = response.data.id;
+          this.deptList.push(response.data);
+        })
+      },
       /*加载科室list*/
       getOfficeList(officeId){
         this.deptParams.parentId = officeId;
@@ -421,11 +613,34 @@
           this.officeList = response.data
         })
       },
+      getOfficeListUpdate(officeId){
+        this.officeListUpdate = [];
+        this.officeParams.parentId = officeId;
+        listDept(this.officeParams).then(response => {
+          this.officeListUpdate = response.data.results
+        })
+      },
       /*加载全部部门*/
       getDeptAll(){
         listDept(this.deptAll).then(response => {
           AllDeptName = response.data
         })
+      },
+      //加载全部人员信息
+      getUserList(){
+        listUser(this.levelParams).then(response => {
+          this.userList = response.data;
+        })
+      },
+      /*邮件发送*/
+      emailJudge(){
+        if (this.$route.query.emailList !== undefined && this.$route.query.emailList !== null){
+          if (this.$route.query.emailList.length > 0){
+            sendEmail(this.$route.query.questionId, this.$route.query.emailList, window.location.href).then(response => {
+              console.log(response.msg);
+            });
+          }
+        }
       },
       /*搜索提交*/
       handleQuery() {
@@ -441,6 +656,7 @@
         this.loading = true;
         questionList(this.queryParams).then(response => {
           this.questionList = response.data.results;
+          this.total = response.data.count;
           this.loading=false;
         })
       },
@@ -450,18 +666,20 @@
           this.originList = response.data
         })
       },
-      // 获取提交信息的用户个人信息
+      // 获取用户个人信息
       getUserInfo() {
         getUserProfile().then(response => {
+          this.form.userEmail = [];
+          this.form.userEmail.push(response.data.email);
           // 判断用户部门的parentId是否为根节点
-          if (response.data.dept.parentId === '' || response.data.dept.parentId === null){
+          if (response.data.dept.parentId === '' || response.data.dept.parentId === null) {
             this.form.duty_dep_id = response.data.dept.id;
             this.deptList.push(response.data.dept);
             this.getOfficeList(response.data.dept.id)
-          }else if (response.data.dept.parentId === 1){
+          } else if (response.data.dept.parentId === 1) {
             this.form.duty_dep_id = response.data.dept.id;
             this.deptList.push(response.data.dept);
-          } else{
+          } else {
             // 获取部门信息
             this.getDeptInfo(response.data.dept.parentId);
             // 获取部门信息列表
@@ -472,7 +690,6 @@
       /*删除*/
       deleteQuestion(row){
         const user_question_title = row.question_title || this.question_title;
-        console.log(user_question_title);
         this.$confirm('是否确认删除名称为"' + user_question_title + '"的数据项?', "警告", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
@@ -488,13 +705,30 @@
       addQuestion(){
         this.open = true;
         this.title = '新增';
+        this.getBroadList();
+        this.getLevelList();
+        this.getOriginList();
+        this.getLevelList();
         this.getUserInfo();
+        this.getUserList();
       },
       /*修改*/
       updateQuestion(row){
         this.open = true;
         this.title = '修改';
-        this.form = Object.assign({}, row)
+        this.form = Object.assign({}, row);
+        this.officeListUpdate = [];
+        this.getOfficeListUpdate(this.form.duty_dep_id);
+        if(this.form.attachment !== '' && this.form.attachment !== null){
+          this.selectSaveFileId(this.form.attachment);
+        }
+      },
+      /*修改时加载附件内容*/
+      selectSaveFileId(fileId){
+        getSaveFile(fileId).then(response => {
+          this.fileList = [];
+          this.fileList.push(response.data)
+        })
       },
       /** 导出按钮操作 */
       handleExport() {
@@ -515,6 +749,7 @@
         this.single = selection.length!==1;
         this.multiple = !selection.length
       },
+
       //附件上传校验
       beforeUpload(file) {
         const testFile = file.name.substring(file.name.lastIndexOf('.') + 1);
@@ -531,7 +766,7 @@
           this.msgWarning('文件大小不能超过10MB');
         }
         return type && size;
-        0      },
+      },
       // 文件上传钩子
       handleRemove(file, fileList) {
         console.log(file, fileList);
@@ -561,6 +796,7 @@
         if (this.form.id != undefined) {
           questionUpdate(this.form).then(response => {
             this.open=false;
+            this.$refs["form"].resetFields();
             if (response.msg === 'success'){
               this.msgSuccess('修改成功');
               this.getQuestionList();
@@ -571,6 +807,7 @@
       } else {
           questionAdd(this.form).then(response => {
             this.open=false;
+            this.$refs["form"].resetFields();
             if (response.msg === 'success'){
               this.msgSuccess('新增成功');
               this.getQuestionList();
@@ -580,14 +817,27 @@
           })
         };
       },
-      resetForm(){
-        this.open=false;
-        this.msgInfo('取消新增');
+      //点击取消重置表单内容
+      resetForm(form){
+        this.$refs[form].resetFields();
+        this.open = false
       },
+      // 查看问题详情
+      lookQuestion(row){
+        this.seeOpen = true;
+        this.form = Object.assign({}, row);
+        this.getOfficeList(this.form.duty_dep_id);
+      },
+      //  查看问题取消
+      seeCancel(form){
+        this.$refs[form].resetFields();
+        this.seeOpen = false
+      }
       }
   }
 </script>
 
 <style scoped>
-
+  table{border-collapse: collapse;table-layout: fixed;}
+  td {font-size: 15px;border:0;column-width: 100px;padding-bottom: 6px;padding-top: 6px}
 </style>
