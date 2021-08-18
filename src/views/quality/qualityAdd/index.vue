@@ -43,7 +43,9 @@
           <el-input v-model="form.number" clearable size="small" placeholder="请输入数量"/>
         </el-form-item>
         <el-form-item label="发生时间" prop="occur_time">
-          <el-date-picker v-model="form.occur_time" clearable type="date" style="width: 188px" size="small" :picker-options="pickerOptions" placeholder="选择日期"></el-date-picker>
+          <el-date-picker v-model="form.occur_time" clearable type="date" format="yyyy-MM-dd" value-format="yyyy-MM-dd"
+                          style="width: 188px" size="small" :picker-options="pickerOptions"
+                          placeholder="选择日期"></el-date-picker>
         </el-form-item>
         <el-form-item label="重要程度" prop="question_level">
           <el-select v-model="form.question_level" clearable size="small">
@@ -79,21 +81,31 @@
         </el-form-item>
       </el-row>
       <el-row>
-          <el-form-item label="添加附件" prop="attachment">
-            <el-upload class="upload-demo" :limit="1" ref="upload" :file-list="fileList" :http-request="requestUpload"
-                       :on-preview="handlePreview" :on-remove="handleRemove" :before-upload="beforeUpload" :auto-upload="false" action="">
-              <template #trigger>
-                <el-button size="small" type="primary">选取文件</el-button>
-              </template>
-              <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器</el-button>
-              <div slot="tip" class="el-upload__tip">文件只能是zip,rar,7z,png,jpeg,bmp,jpg,docx,xlsx,doc,xls,pptx,pdf,msg格式，且不超过500kb</div>
-            </el-upload>
-          </el-form-item>
+        <el-form-item label="添加附件" prop="attachment">
+          <el-upload class="upload-demo" :limit="1" ref="upload" :file-list="fileList" :http-request="requestUpload"
+                     :on-preview="handlePreview" :on-remove="handleRemove" :before-upload="beforeUpload"
+                     :auto-upload="false" action="">
+            <template #trigger>
+              <el-button size="small" type="primary" :disabled="form.attachment">选取文件</el-button>
+            </template>
+            <el-button style="margin-left: 10px;" size="small" type="success" :disabled="form.attachment"
+                       @click="submitUpload">上传到服务器
+            </el-button>
+            <el-button style="margin-left: 10px;" size="small" type="danger" :disabled="!form.attachment"
+                       @click="deleteAttachment(form.attachment,form.attachmentName)">删除附件
+            </el-button>
+            <div slot="tip" class="el-upload__tip">
+              文件只能是zip,rar,7z,png,jpeg,bmp,jpg,docx,xlsx,doc,xls,pptx,pdf,msg格式，且不超过10M
+            </div>
+          </el-upload>
+        </el-form-item>
       </el-row>
       <el-row>
         <el-form-item label="发送邮箱" prop='emailList'>
-          <el-select style="width:900px;" v-model="form.emailList" size="small" placeholder="请选择用户邮箱" multiple filterable  clearable>
-            <el-option v-for="item in userList" v-if="item.email" :value="item.email" :label="`${item.name}(${item.email})`" :key="item.id"></el-option>
+          <el-select style="width:900px;" v-model="form.emailList" size="small" placeholder="请选择用户邮箱" multiple
+                     filterable clearable>
+            <el-option v-for="item in userList" v-if="item.email" :value="item.email"
+                       :label="`${item.name}(${item.email})`" :key="item.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="抄送邮箱" prop="otherEmail">
@@ -120,7 +132,7 @@
   import {levelList} from '@/api/quality/level';
   import {originList} from '@/api/quality/origin';
   import {questionAdd} from '@/api/quality/question';
-  import {addSaveFile} from "@/api/vadmin/system/savefile";
+  import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept} from "@/api/vadmin/permission/dept";
   import {validEmails, isInteger} from "@/utils/validate";
@@ -129,9 +141,9 @@
     name: "Index",
     data() {
       const checkEmail = (rule, value, callback) => {
-        if (value === '' || value === undefined || value === null){
+        if (value === '' || value === undefined || value === null) {
           callback();
-        } else{
+        } else {
           if (!validEmails(value)) {
             return callback(new Error('邮箱格式不正确'))
           } else {
@@ -139,13 +151,13 @@
           }
         }
       };
-      const checkInteger = (rule, value , callback) => {
-        if (value === '' || value === undefined || value === null){
+      const checkInteger = (rule, value, callback) => {
+        if (value === '' || value === undefined || value === null) {
           callback();
-        }else {
-          if (!isInteger(value)){
+        } else {
+          if (!isInteger(value)) {
             return callback(new Error('请输入正整数'))
-          } else{
+          } else {
             callback();
           }
         }
@@ -235,7 +247,7 @@
           title_status: [{required: true, message: '请选择关闭与否', trigger: 'change'}],
           question_description: [{required: true, message: '请输入问题描述', trigger: 'change'}],
           question_schedule: [{required: true, message: '请输入最新进度', trigger: 'change'}],
-          otherEmail: [{ validator:checkEmail, trigger: 'change'}],
+          otherEmail: [{validator: checkEmail, trigger: 'change'}],
           number: [{validator: checkInteger, trigger: 'change'}],
           machine_num: [{validator: checkInteger, trigger: 'change'}]
         },
@@ -282,7 +294,7 @@
         })
       },
       //加载全部人员信息
-      getUserList(){
+      getUserList() {
         listUser(this.levelParams).then(response => {
           this.userList = response.data;
         })
@@ -315,11 +327,15 @@
       requestUpload(param) {
         let formData = new FormData();
         formData.append("file", param.file);
+        const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '文件上传中', background:'rgba(0,0,0,0.7)'});
         addSaveFile(formData).then(response => {
+          loading.close();
           this.form.attachment = response.data.id;
           this.form.attachmentName = response.data.name;
+          this.fileList = [];
           if (response.msg === 'success') {
             this.msgSuccess('上传成功!');
+            this.fileList = response.data;
           } else {
             this.msgError('上传失败!')
           }
@@ -328,6 +344,22 @@
       //文件上传提交
       submitUpload() {
         this.$refs.upload.submit();
+      },
+      //已上传附件的删除
+      deleteAttachment(attachment, attachmentName) {
+        this.$confirm('是否确认删除名称为"' + attachmentName + '"的文件?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function () {
+          //删除文件内容
+          return delSaveFile(attachment);
+        }).then(() => {
+          this.fileList = [];
+          this.form.attachment = null;
+          this.form.attachmentName = null;
+          this.msgSuccess("删除成功");
+        })
       },
       // 获取用户个人信息
       getUserInfo() {
@@ -355,24 +387,41 @@
           // 问题新增提交
           if (valid) {
             //邮箱进行判空处理
+            let emailNull = 1;
+            let otherNull = 1;
+            if (this.form.emailList === null || this.form.emailList === undefined || this.form.emailList.length < 0 || this.form.emailList === '') {
+              console.log('emailList为空');
+              emailNull = 0;
+            }
+            if (this.form.otherEmail === null || this.form.otherEmail === undefined || this.form.otherEmail === "") {
+              console.log('otherEmail为空');
+              otherNull = 0;
+            }
+            // if (this.form)
             let allEmail = [];
-            if(this.form.emailList.length > 0 && this.form.otherEmail !== ''){
+            if (emailNull === 1 && otherNull === 1) {
+              console.log('1');
               const Email = this.form.emailList;
               const otherEmail = this.form.otherEmail.split(',');
               allEmail = Email.concat(otherEmail);
               //将数组数据转换成字符串数据
               this.form.emailList = this.form.emailList.join(',');
-            } else if (this.form.emailList.length > 0 && this.form.otherEmail === ''){
+            } else if (emailNull === 1 && otherNull === 0) {
+              console.log('2');
               allEmail = this.form.emailList;
               //将数组数据转换成字符串数据
               this.form.emailList = this.form.emailList.join(',');
-            } else if (this.form.emailList <= 0 && this.form.otherEmail!== ''){
+            } else if (emailNull === 0 && otherNull === 1) {
+              console.log('3');
               allEmail = this.form.otherEmail.split(',');
             } else {
-              this.form.otherEmail = undefined;
-              this.form.emailList = undefined;
+              console.log('4');
+              this.form.otherEmail = null;
+              this.form.emailList = null;
             }
+            const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '信息上传中', background:'rgba(0,0,0,0.7)'});
             questionAdd(this.form).then(response => {
+              loading.close();
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
               //跳转至显示页面
@@ -389,7 +438,7 @@
         this.getUserInfo();
       },
       questionPath(questionId, allEmail) {
-        this.$router.push({name: 'Questionlist', params: { questionId: questionId, allEmail: allEmail }});
+        this.$router.push({name: 'Questionlist', params: {questionId: questionId, allEmail: allEmail}});
       }
 
     },

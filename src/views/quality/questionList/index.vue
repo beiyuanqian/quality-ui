@@ -46,7 +46,8 @@
             </el-select>
           </el-form-item>
           <el-form-item label="发生时间" prop="occur_time">
-            <el-date-picker v-model="queryParams.occur_time" size="small" :picker-options="pickerOptions" clearable placeholder="选择日期"></el-date-picker>
+            <el-date-picker v-model="queryParams.occur_time" size="small" format="yyyy-MM-dd" value-format="yyyy-MM-dd"
+                            :picker-options="pickerOptions" clearable placeholder="选择日期"></el-date-picker>
           </el-form-item>
         </el-col>
       </el-row>
@@ -175,8 +176,8 @@
     />
 
     <!-- 添加或修改部门对话框 -->
-    <el-dialog :title="title" :visible.sync="open" append-to-body width="900px">
-      <el-form ref="form" :model="form" :rules="rules" label-width="80px" style="width: 800px" >
+    <el-dialog :title="title" :visible.sync="open" append-to-body width="900px" :close-on-click-modal="false">
+      <el-form ref="form" :model="form" :rules="rules" label-width="80px" style="width: 800px">
         <el-row>
           <el-col :span="8">
             <el-form-item label="问题主题" prop="question_title">
@@ -252,8 +253,9 @@
             </el-form-item>
           </el-col>
           <el-col :span="8">
-            <el-form-item label="发送时间" prop="occur_time">
-              <el-date-picker  v-model="form.occur_time" size="small" style="width: 187px" :picker-options="pickerOptions" placeholder="请选择时间"
+            <el-form-item label="发生时间" prop="occur_time">
+              <el-date-picker v-model="form.occur_time" format="yyyy-MM-dd" value-format="yyyy-MM-dd" size="small"
+                              style="width: 187px" :picker-options="pickerOptions" placeholder="请选择时间"
                               clearable></el-date-picker>
             </el-form-item>
           </el-col>
@@ -285,7 +287,8 @@
         <el-row>
           <el-col>
             <el-form-item label="问题描述" prop="question_description">
-              <el-input type="textarea" style="width: 720px" :autosize="{ minRows: 5}" v-model="form.question_description"
+              <el-input type="textarea" style="width: 720px" :autosize="{ minRows: 5}"
+                        v-model="form.question_description"
                         placeholder="请输入问题描述" clearable></el-input>
             </el-form-item>
           </el-col>
@@ -305,12 +308,16 @@
                          :on-preview="handlePreview" :on-remove="handleRemove" :before-upload="beforeUpload"
                          :auto-upload="false" action="">
                 <template #trigger>
-                  <el-button size="small" type="primary">选取文件</el-button>
+                  <el-button size="small" type="primary" :disabled="form.attachment">选取文件</el-button>
                 </template>
-                <el-button style="margin-left: 10px;" size="small" type="success" @click="submitUpload">上传到服务器
+                <el-button style="margin-left: 10px;" :disabled="form.attachment" size="small" type="success"
+                           @click="submitUpload">上传到服务器
+                </el-button>
+                <el-button style="margin-left: 10px;" size="small" type="danger" :disabled="!form.attachment"
+                           @click="deleteAttachment(form.attachment,form.attachmentName)">删除附件
                 </el-button>
                 <div slot="tip" class="el-upload__tip">
-                  文件只能是zip,rar,7z,png,jpeg,bmp,jpg,docx,xlsx,doc,xls,pptx,pdf,msg格式，且不超过500kb
+                  文件只能是zip,rar,7z,png,jpeg,bmp,jpg,docx,xlsx,doc,xls,pptx,pdf,msg格式，且不超过10M
                 </div>
               </el-upload>
             </el-form-item>
@@ -346,104 +353,31 @@
       </div>
     </el-dialog>
     <!--查看详情框-->
-    
-    <!--<el-dialog title="查看详情" :visible.sync="seeOpen" append-to-body>
-      <el-form ref="form" :model="form" :inline="true" label-width="80px">
-        <el-row>
-          <el-form-item label="问题主题" prop="question_title">
-            <el-input v-model="form.question_title" size="small" placeholder="请输入问题主题" disabled></el-input>
-          </el-form-item>
-          <el-form-item label="机型类别" prop="machine_category">
-            <el-input v-model="form.machine_category" size="small" placeholder="请输入机器类型" disabled></el-input>
-          </el-form-item>
-          <el-form-item label="机型名称" prop="machine_name">
-            <el-input v-model="form.machine_name" size="small" placeholder="请输入机器名称" disabled></el-input>
-          </el-form-item>
-        </el-row>
-        <el-row>
-          <el-form-item label="涉及台数" prop="machine_num">
-            <el-input v-model="form.machine_num" size="small" placeholder="请输入涉及台数" disabled></el-input>
-          </el-form-item>
-          <el-form-item label="问题大类" prop="question_broad">
-            <el-select v-model="form.question_broad" size="small" placeholder="请选择问题大类" disabled>
-              <el-option v-for="item in broadList" :value="item.question_name" :label="item.question_name"
-                         :key="item.question_name"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="问题细类" prop="question_slender">
-            <el-input v-model="form.question_slender" size="small" placeholder="请输入问题细类" disabled></el-input>
-          </el-form-item>
-        </el-row>
-        <el-row>
-          <el-form-item label="责任部门" prop="duty_dep_id">
-            <el-select v-model="form.duty_dep_id" size="small" placeholder="请选择责任部门" disabled>
-              <el-option v-for="item in deptList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="责任科室" prop="duty_office_id">
-            <el-select v-model="form.duty_office_id" size="small" placeholder="请选择责任科室" disabled>
-              <el-option v-for="item in officeList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="责任人" prop="duty_person">
-            <el-input v-model="form.duty_person" size="small" placeholder="请输入责任人" disabled></el-input>
-          </el-form-item>
-        </el-row>
-        <el-row>
-          <el-form-item label="故障数量" prop="number">
-            <el-input v-model="form.number" size="small" placeholder="请输入故障数量" disabled></el-input>
-          </el-form-item>
-          <el-form-item label="重要程度" prop="question_level">
-            <el-select v-model="form.question_level" size="small" placeholder="请选择严重程度" disabled>
-              <el-option label="一般" value="一般"></el-option>
-              <el-option label="重要" value="重要"></el-option>
-              <el-option label="非常重要" value="非常重要"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="发送时间" prop="occur_time">
-            <el-date-picker v-model="form.occur_time" size="small" placeholder="请选择时间" disabled></el-date-picker>
-          </el-form-item>
-        </el-row>
-        <el-row>
-          <el-form-item label="问题来源" prop="question_level">
-            <el-select v-model="form.question_origin" size="small" placeholder="请选择" disabled>
-              <el-option v-for="item in originList" :label="item.question_origin" :value="item.question_origin"
-                         :key="item.question_origin"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="关闭与否" prop="title_status">
-            <el-select v-model="form.title_status" size="small" placeholder="请选择" disabled>
-              <el-option label="是" value="是"></el-option>
-              <el-option label="否" value="否"></el-option>
-            </el-select>
-          </el-form-item>
-          <el-form-item label="黑点" prop="black_point">
-            <el-input v-model="form.black_point" size="small" placeholder="请输入黑点" disabled>
-            </el-input>
-          </el-form-item>
-        </el-row>
-        <el-row>
-          <el-form-item label="问题描述" prop="question_description">
-            <el-input type="textarea" style="width: 800px" :autosize="{ minRows: 5}" v-model="form.question_description"
-                      size="small" placeholder="请输入问题描述" disabled></el-input>
-          </el-form-item>
-        </el-row>
-        <el-row>
-          <el-form-item label="最新进度" prop="question_schedule">
-            <el-input type="textarea" style="width: 800px" :autosize="{ minRows: 5}" v-model="form.question_schedule"
-                      size="small" placeholder="请输入最新进度" disabled></el-input>
-          </el-form-item>
-        </el-row>
-        <el-row>
-          <el-form-item label="附件名称" prop="attachmentName">
-            <el-input v-model="form.attachmentName" disabled></el-input>
-          </el-form-item>
-        </el-row>
-      </el-form>
+    <el-dialog :visible.sync="seeOpen" append-to-body>
+      <el-descriptions title="问题详情">
+        <el-descriptions-item label="问题主题">{{form.question_title}}</el-descriptions-item>
+        <el-descriptions-item label="机型类别">{{form.machine_category}}</el-descriptions-item>
+        <el-descriptions-item label="机型名称">{{form.machine_name}}</el-descriptions-item>
+        <el-descriptions-item label="涉及台数">{{form.machine_num}}</el-descriptions-item>
+        <el-descriptions-item label="问题大类">{{form.question_broad}}</el-descriptions-item>
+        <el-descriptions-item label="问题细类">{{form.question_slender}}</el-descriptions-item>
+        <el-descriptions-item label="责任部门">{{form.duty_dep_id | deptNameFilter}}</el-descriptions-item>
+        <el-descriptions-item label="责任科室">{{form.duty_office_id | deptNameFilter}}</el-descriptions-item>
+        <el-descriptions-item label="负责人">{{form.duty_person}}</el-descriptions-item>
+        <el-descriptions-item label="故障数量">{{form.number}}</el-descriptions-item>
+        <el-descriptions-item label="重要程度">{{form.question_level}}</el-descriptions-item>
+        <el-descriptions-item label="发生时间">{{form.occur_time}}</el-descriptions-item>
+        <el-descriptions-item label="问题来源">{{form.question_origin}}</el-descriptions-item>
+        <el-descriptions-item label="关闭与否">{{form.title_status}}</el-descriptions-item>
+        <el-descriptions-item label="黑点">{{form.black_point}}</el-descriptions-item>
+        <el-descriptions-item label="问题描述">{{form.question_description}}</el-descriptions-item>
+        <el-descriptions-item label="最新进度">{{form.question_schedule}}</el-descriptions-item>
+        <el-descriptions-item label="附件名称">{{form.attachmentName}}</el-descriptions-item>
+      </el-descriptions>
       <div slot="footer" class="dialog-footer">
         <el-button @click="seeCancel('form')">关闭</el-button>
       </div>
-    </el-dialog>-->
+    </el-dialog>
   </div>
 </template>
 
@@ -469,11 +403,26 @@
       },
     },
     data() {
-      const checkInteger = (rule, value, callbacke) => {
-        if (!isInteger(value)) {
-          return callbacke(new Error('请输入正正数'))
+      const checkEmail = (rule, value, callback) => {
+        if (value === '' || value === undefined || value === null) {
+          callback();
         } else {
-          callbacke();
+          if (!validEmails(value)) {
+            return callback(new Error('邮箱格式不正确'))
+          } else {
+            callback();
+          }
+        }
+      };
+      const checkInteger = (rule, value, callback) => {
+        if (value === '' || value === undefined || value === null) {
+          callback();
+        } else {
+          if (!isInteger(value)) {
+            return callback(new Error('请输入正整数'))
+          } else {
+            callback();
+          }
         }
       };
       return {
@@ -529,11 +478,11 @@
         personAll: {
           pageNum: 'all'
         },
-        // 部门List
+        // 搜索部门List
         deptList: [],
-        // 科室List
+        // 搜索科室List
         officeList: [],
-        // 科室ListUpdate
+        // 更新/查看officeList
         officeListUpdate: [],
         // 售后问题List
         questionList: [],
@@ -591,10 +540,11 @@
           title_status: [{required: true, message: '请选择关闭与否', trigger: 'change'}],
           question_description: [{required: true, message: '请输入问题描述', trigger: 'change'}],
           question_schedule: [{required: true, message: '请输入最新进度', trigger: 'change'}],
+          otherEmail: [{validator: checkEmail, trigger: 'change'}],
           number: [{validator: checkInteger, trigger: 'change'}],
           machine_num: [{validator: checkInteger, trigger: 'change'}]
         },
-        fileForm:{
+        fileForm: {
           filePath: undefined,
           fileName: undefined
         }
@@ -616,13 +566,13 @@
           this.broadList = response.data
         })
       },
-      /*加载部门list*/
+      /*搜索加载部门list*/
       getDeptList() {
         listDept(this.deptParams).then(response => {
           this.deptList = response.data
         })
       },
-      /*加载科室list*/
+      /*搜索加载科室list*/
       getOfficeList(officeId) {
         this.officeList = [];
         this.officeParams.parentId = officeId;
@@ -630,14 +580,17 @@
           this.officeList = response.data.results
         })
       },
-      /*加载某一部门详情*/
+      /*更新/查看加载某部门下属科室列表*/
       getOfficeMessage(officeId) {
         this.officeListUpdate = [];
-        getDept(officeId).then(response => {
-          this.officeListUpdate = response.data.results
-        })
+        if (officeId !== null && officeId !== "" && officeId !== undefined) {
+          this.officeParams.parentId = officeId;
+          listDept(this.officeParams).then(response => {
+            this.officeListUpdate = response.data.results
+          })
+        }
       },
-      /*加载全部部门*/
+      /*筛选框加载全部部门*/
       getDeptAll() {
         listDept(this.deptAll).then(response => {
           AllDeptName = response.data
@@ -651,7 +604,7 @@
       },
       /*邮件发送*/
       emailJudge() {
-        if (this.$route.params.allEmail !== undefined || this.$route.params.allEmail > 0){
+        if (this.$route.params.allEmail !== undefined || this.$route.params.allEmail > 0) {
           sendEmail(this.$route.params.questionId, this.$route.params.allEmail, window.location.href).then(response => {
             console.log(response.msg);
           });
@@ -669,12 +622,12 @@
       /*问题搜索*/
       getQuestionList() {
         this.loading = true;
+        console.log(this.queryParams);
         questionList(this.queryParams).then(response => {
           this.questionList = response.data.results;
           this.total = response.data.count;
           this.loading = false;
         }).catch(err => {
-
         })
       },
       /*问题来源*/
@@ -781,7 +734,9 @@
       requestUpload(param) {
         let formData = new FormData();
         formData.append("file", param.file);
+        const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '文件上传中', background:'rgba(0,0,0,0.7)'});
         addSaveFile(formData).then(response => {
+          loading.close();
           this.form.attachment = response.data.id;
           this.form.attachmentName = response.data.name;
           if (response.msg === 'success') {
@@ -794,44 +749,52 @@
       },
       //文件上传提交
       submitUpload() {
-        console.log(this.form.attachment);
-        //先进行文件的删除
-        if (this.form.attachment !== null && this.form.attachment !== '' && this.form.attachment !== undefined){
-          delSaveFile(this.form.attachment).then(response => {
-            this.$refs.upload.submit();
-          });
-        } else {
-          this.$refs.upload.submit();
-        }
+        this.$refs.upload.submit();
+      },
+      //已上传附件的删除
+      deleteAttachment(attachment, attachmentName) {
+        this.$confirm('是否确认删除名称为"' + attachmentName + '"的文件?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(function () {
+          //删除文件内容
+          return delSaveFile(attachment);
+        }).then(() => {
+          this.fileList =[];
+          this.form.attachment = null;
+          this.form.attachmentName = null;
+          this.msgSuccess("删除成功");
+        })
       },
       // 修改提交
       submitForm(form) {
         //邮箱进行判空处理
-        let emailNull =1;
-        let otherNull =1;
-        if (this.form.emailList === null || this.form.emailList === undefined || this.form.emailList.length < 0 || this.form.emailList === ''){
+        let emailNull = 1;
+        let otherNull = 1;
+        if (this.form.emailList === null || this.form.emailList === undefined || this.form.emailList.length < 0 || this.form.emailList === '') {
           console.log('emailList为空');
           emailNull = 0;
         }
-        if (this.form.otherEmail === null || this.form.otherEmail === undefined || this.form.otherEmail === ""){
+        if (this.form.otherEmail === null || this.form.otherEmail === undefined || this.form.otherEmail === "") {
           console.log('otherEmail为空');
           otherNull = 0;
         }
         // if (this.form)
         let allEmail = [];
-        if(emailNull === 1 && otherNull === 1){
+        if (emailNull === 1 && otherNull === 1) {
           console.log('1');
           const Email = this.form.emailList;
           const otherEmail = this.form.otherEmail.split(',');
           allEmail = Email.concat(otherEmail);
           //将数组数据转换成字符串数据
           this.form.emailList = this.form.emailList.join(',');
-        } else if (emailNull === 1 && otherNull === 0){
+        } else if (emailNull === 1 && otherNull === 0) {
           console.log('2');
           allEmail = this.form.emailList;
           //将数组数据转换成字符串数据
           this.form.emailList = this.form.emailList.join(',');
-        } else if (emailNull === 0 && otherNull === 1){
+        } else if (emailNull === 0 && otherNull === 1) {
           console.log('3');
           allEmail = this.form.otherEmail.split(',');
         } else {
@@ -841,7 +804,9 @@
         }
         console.log(this.form.emailList);
         console.log(this.form.otherEmail);
+        const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '信息上传中', background:'rgba(0,0,0,0.7)'});
         questionUpdate(this.form).then(response => {
+          loading.close();
           this.open = false;
           if (response.msg === 'success') {
             this.msgSuccess('修改成功');
@@ -859,8 +824,8 @@
       },
       //  取消
       cancel(form) {
+        this.open = false;
         this.$refs[form].resetFields();
-        this.open = false
       },
       // 查看问题详情
       lookQuestion(row) {
@@ -870,8 +835,8 @@
       },
       //  查看问题取消
       seeCancel(form) {
+        this.seeOpen = false;
         this.$refs[form].resetFields();
-        this.seeOpen = false
       }
     }
   }
