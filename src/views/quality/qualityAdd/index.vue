@@ -86,12 +86,12 @@
                      :on-preview="handlePreview" :on-remove="handleRemove" :before-upload="beforeUpload"
                      :auto-upload="false" action="">
             <template #trigger>
-              <el-button size="small" type="primary" :disabled="form.attachment">选取文件</el-button>
+              <el-button size="small" type="primary" :disabled="disableJudge(form.attachment)">选取文件</el-button>
             </template>
-            <el-button style="margin-left: 10px;" size="small" type="success" :disabled="form.attachment"
+            <el-button style="margin-left: 10px;" size="small" type="success" :disabled="disableJudge(form.attachment)"
                        @click="submitUpload">上传到服务器
             </el-button>
-            <el-button style="margin-left: 10px;" size="small" type="danger" :disabled="!form.attachment"
+            <el-button style="margin-left: 10px;" size="small" type="danger" :disabled="!disableJudge(form.attachment)"
                        @click="deleteAttachment(form.attachment,form.attachmentName)">删除附件
             </el-button>
             <div slot="tip" class="el-upload__tip">
@@ -135,7 +135,7 @@
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept} from "@/api/vadmin/permission/dept";
-  import {validEmails, isInteger} from "@/utils/validate";
+  import {isInteger,greeEmails} from "@/utils/validate";
 
   export default {
     name: "Index",
@@ -144,8 +144,8 @@
         if (value === '' || value === undefined || value === null) {
           callback();
         } else {
-          if (!validEmails(value)) {
-            return callback(new Error('邮箱格式不正确'))
+          if (!greeEmails(value)) {
+            return callback(new Error('请输入邮箱前几位数字并使用英文逗号隔开'))
           } else {
             callback();
           }
@@ -387,50 +387,62 @@
           // 问题新增提交
           if (valid) {
             //邮箱进行判空处理
-            let emailNull = 1;
-            let otherNull = 1;
-            if (this.form.emailList === null || this.form.emailList === undefined || this.form.emailList.length < 0 || this.form.emailList === '') {
-              console.log('emailList为空');
-              emailNull = 0;
-            }
-            if (this.form.otherEmail === null || this.form.otherEmail === undefined || this.form.otherEmail === "") {
-              console.log('otherEmail为空');
-              otherNull = 0;
-            }
-            // if (this.form)
+            let emailNull = 0;
+            let otherNull = 0;
+            let email = [];
+            let otherList = [];
             let allEmail = [];
+
+            if (JSON.stringify(this.form.emailList) !== '[]') {
+              console.log('emailList不为空');
+              email = this.form.emailList;
+              // 将emailList转换成字符串形式进行保存
+              this.form.emailList = this.form.emailList.join(',');
+              emailNull = 1;
+            }
+            if (this.form.otherEmail !== null && this.form.otherEmail !== undefined && this.form.otherEmail !== "") {
+              console.log('otherEmail不为空');
+              otherList = this.form.otherEmail.split(',');
+              otherList = this.addPostfix(otherList);
+              otherNull = 1;
+            }
             if (emailNull === 1 && otherNull === 1) {
               console.log('1');
-              const Email = this.form.emailList;
-              const otherEmail = this.form.otherEmail.split(',');
-              allEmail = Email.concat(otherEmail);
-              //将数组数据转换成字符串数据
-              this.form.emailList = this.form.emailList.join(',');
+              allEmail = email.concat(otherList);
+
             } else if (emailNull === 1 && otherNull === 0) {
               console.log('2');
-              allEmail = this.form.emailList;
-              //将数组数据转换成字符串数据
-              this.form.emailList = this.form.emailList.join(',');
+              allEmail = email;
             } else if (emailNull === 0 && otherNull === 1) {
               console.log('3');
-              allEmail = this.form.otherEmail.split(',');
+              allEmail = otherList;
+              this.form.emailList = null;
             } else {
               console.log('4');
               this.form.otherEmail = null;
               this.form.emailList = null;
             }
-            const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '信息上传中', background:'rgba(0,0,0,0.7)'});
+            console.log(allEmail)
+          /*  const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '信息上传中', background:'rgba(0,0,0,0.7)'});
             questionAdd(this.form).then(response => {
               loading.close();
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
               //跳转至显示页面
               this.questionPath(response.data.id, allEmail);
-            });
+            });*/
           } else {
             console.log('error submit!!');
           }
         });
+      },
+      // 对otherEmail进行后缀添加
+      addPostfix(otherEmail){
+        const email = [];
+        for (let i = 0; i < otherEmail.length; i++){
+          email.push(otherEmail[i] + '@gree.com.cn')
+        }
+        return email;
       },
       //点击取消重置表单内容
       resetForm(queryForm) {
@@ -439,8 +451,11 @@
       },
       questionPath(questionId, allEmail) {
         this.$router.push({name: 'Questionlist', params: {questionId: questionId, allEmail: allEmail}});
+      },
+      // 按钮禁用
+      disableJudge(id){
+        return id > 0;
       }
-
     },
   };
 </script>

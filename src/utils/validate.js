@@ -70,6 +70,16 @@ export function validEmails(emails) {
 }
 
 /**
+ * @param {string} emails
+ * @returns {Boolean}
+ */
+export function greeEmails(emails) {
+  const reg= /^[A-Za-z0-9,]+$/;
+  return reg.test(emails)
+}
+
+
+/**
  * @param {string} str
  * @returns {Boolean}
  */

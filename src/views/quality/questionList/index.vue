@@ -3,7 +3,7 @@
     <el-form :model="queryParams" ref="queryForm" v-show="showSearch" :inline="true">
       <el-row>
         <el-col>
-          <el-form-item label="问题主题" prop="question_title">
+          <el-form-item label="问题主题" prop="question_title" label-width="">
             <el-input v-model="queryParams.question_title" placeholder="请输入问题主题" clearable size="small"/>
           </el-form-item>
           <el-form-item label="机型类别" prop="machine_category">
@@ -308,12 +308,12 @@
                          :on-preview="handlePreview" :on-remove="handleRemove" :before-upload="beforeUpload"
                          :auto-upload="false" action="">
                 <template #trigger>
-                  <el-button size="small" type="primary" :disabled="form.attachment">选取文件</el-button>
+                  <el-button size="small" type="primary" :disabled="disableJudge(form.attachment)">选取文件</el-button>
                 </template>
-                <el-button style="margin-left: 10px;" :disabled="form.attachment" size="small" type="success"
+                <el-button style="margin-left: 10px;" :disabled="disableJudge(form.attachment)" size="small" type="success"
                            @click="submitUpload">上传到服务器
                 </el-button>
-                <el-button style="margin-left: 10px;" size="small" type="danger" :disabled="!form.attachment"
+                <el-button style="margin-left: 10px;" size="small" type="danger" :disabled="!disableJudge(form.attachment)"
                            @click="deleteAttachment(form.attachment,form.attachmentName)">删除附件
                 </el-button>
                 <div slot="tip" class="el-upload__tip">
@@ -353,8 +353,8 @@
       </div>
     </el-dialog>
     <!--查看详情框-->
-    <el-dialog :visible.sync="seeOpen" append-to-body>
-      <el-descriptions title="问题详情">
+    <el-dialog :visible.sync="seeOpen">
+      <el-descriptions class="margin-top" direction="vertical" :column="2" title="问题详情" border>
         <el-descriptions-item label="问题主题">{{form.question_title}}</el-descriptions-item>
         <el-descriptions-item label="机型类别">{{form.machine_category}}</el-descriptions-item>
         <el-descriptions-item label="机型名称">{{form.machine_name}}</el-descriptions-item>
@@ -370,9 +370,10 @@
         <el-descriptions-item label="问题来源">{{form.question_origin}}</el-descriptions-item>
         <el-descriptions-item label="关闭与否">{{form.title_status}}</el-descriptions-item>
         <el-descriptions-item label="黑点">{{form.black_point}}</el-descriptions-item>
+        <el-descriptions-item label="附件名称">{{form.attachmentName}}</el-descriptions-item>
         <el-descriptions-item label="问题描述">{{form.question_description}}</el-descriptions-item>
         <el-descriptions-item label="最新进度">{{form.question_schedule}}</el-descriptions-item>
-        <el-descriptions-item label="附件名称">{{form.attachmentName}}</el-descriptions-item>
+
       </el-descriptions>
       <div slot="footer" class="dialog-footer">
         <el-button @click="seeCancel('form')">关闭</el-button>
@@ -383,7 +384,7 @@
 
 <script>
   import {broadList} from '@/api/quality/broad';
-  import {getDept, listDept} from '@/api/vadmin/permission/dept';
+  import {listDept} from '@/api/vadmin/permission/dept';
   import {questionDelete, questionList, questionUpdate, sendEmail} from '@/api/quality/question';
   import {originList} from '@/api/quality/origin';
   import {addSaveFile, downloadFile, getSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
@@ -540,7 +541,7 @@
           title_status: [{required: true, message: '请选择关闭与否', trigger: 'change'}],
           question_description: [{required: true, message: '请输入问题描述', trigger: 'change'}],
           question_schedule: [{required: true, message: '请输入最新进度', trigger: 'change'}],
-          otherEmail: [{validator: checkEmail, trigger: 'change'}],
+          // otherEmail: [{validator: checkEmail, trigger: 'change'}],
           number: [{validator: checkInteger, trigger: 'change'}],
           machine_num: [{validator: checkInteger, trigger: 'change'}]
         },
@@ -551,10 +552,9 @@
       }
     },
     created() {
+      this.getDeptAll();
       this.getBroadList();
       this.getDeptList();
-      this.getQuestionList();
-      this.getDeptAll();
       this.getOriginList();
       this.emailJudge();
       this.usersEmails();
@@ -593,8 +593,9 @@
       /*筛选框加载全部部门*/
       getDeptAll() {
         listDept(this.deptAll).then(response => {
-          AllDeptName = response.data
-        })
+          AllDeptName = response.data;
+          this.getQuestionList();
+        });
       },
       /*加载平台用户的Emails*/
       usersEmails() {
@@ -604,10 +605,12 @@
       },
       /*邮件发送*/
       emailJudge() {
-        if (this.$route.params.allEmail !== undefined || this.$route.params.allEmail > 0) {
-          sendEmail(this.$route.params.questionId, this.$route.params.allEmail, window.location.href).then(response => {
-            console.log(response.msg);
-          });
+        if (this.$route.params.allEmail !== undefined){
+          if (JSON.stringify(this.$route.params.allEmail) !== '[]') {
+            sendEmail(this.$route.params.questionId, this.$route.params.allEmail, window.location.href).then(response => {
+              console.log(response.msg);
+            });
+          }
         }
       },
       /*搜索提交*/
@@ -622,7 +625,6 @@
       /*问题搜索*/
       getQuestionList() {
         this.loading = true;
-        console.log(this.queryParams);
         questionList(this.queryParams).then(response => {
           this.questionList = response.data.results;
           this.total = response.data.count;
@@ -646,6 +648,9 @@
           cancelButtonText: "取消",
           type: "warning"
         }).then(function () {
+          if(row.attachment > 0){
+            delSaveFile(row.attachment);
+          }
           return questionDelete(row.id);
         }).then(() => {
           this.getQuestionList();
@@ -734,7 +739,12 @@
       requestUpload(param) {
         let formData = new FormData();
         formData.append("file", param.file);
-        const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '文件上传中', background:'rgba(0,0,0,0.7)'});
+        const loading = this.$loading({
+          lock: true,
+          spinner: 'el-icon-loading',
+          text: '文件上传中',
+          background: 'rgba(0,0,0,0.7)'
+        });
         addSaveFile(formData).then(response => {
           loading.close();
           this.form.attachment = response.data.id;
@@ -761,7 +771,7 @@
           //删除文件内容
           return delSaveFile(attachment);
         }).then(() => {
-          this.fileList =[];
+          this.fileList = [];
           this.form.attachment = null;
           this.form.attachmentName = null;
           this.msgSuccess("删除成功");
@@ -770,41 +780,49 @@
       // 修改提交
       submitForm(form) {
         //邮箱进行判空处理
-        let emailNull = 1;
-        let otherNull = 1;
-        if (this.form.emailList === null || this.form.emailList === undefined || this.form.emailList.length < 0 || this.form.emailList === '') {
-          console.log('emailList为空');
-          emailNull = 0;
-        }
-        if (this.form.otherEmail === null || this.form.otherEmail === undefined || this.form.otherEmail === "") {
-          console.log('otherEmail为空');
-          otherNull = 0;
-        }
-        // if (this.form)
+        let emailNull = 0;
+        let otherNull = 0;
+        let email = [];
+        let otherList = [];
         let allEmail = [];
+
+
+        if (JSON.stringify(this.form.emailList) !== '[]') {
+          console.log('emailList不为空');
+          email = this.form.emailList;
+          // 将emailList转换成字符串形式进行保存
+          this.form.emailList = this.form.emailList.join(',');
+          emailNull = 1;
+        }
+        if (this.form.otherEmail !== null && this.form.otherEmail !== undefined && this.form.otherEmail !== "") {
+          console.log('otherEmail不为空');
+          otherList = this.form.otherEmail.split(',');
+          otherList = this.addPostfix(otherList);
+          otherNull = 1;
+        }
         if (emailNull === 1 && otherNull === 1) {
           console.log('1');
-          const Email = this.form.emailList;
-          const otherEmail = this.form.otherEmail.split(',');
-          allEmail = Email.concat(otherEmail);
-          //将数组数据转换成字符串数据
-          this.form.emailList = this.form.emailList.join(',');
+          allEmail = email.concat(otherList);
+
         } else if (emailNull === 1 && otherNull === 0) {
           console.log('2');
-          allEmail = this.form.emailList;
-          //将数组数据转换成字符串数据
-          this.form.emailList = this.form.emailList.join(',');
+          allEmail = email;
         } else if (emailNull === 0 && otherNull === 1) {
           console.log('3');
-          allEmail = this.form.otherEmail.split(',');
+          allEmail = otherList;
+          this.form.emailList = null;
         } else {
           console.log('4');
           this.form.otherEmail = null;
           this.form.emailList = null;
         }
-        console.log(this.form.emailList);
-        console.log(this.form.otherEmail);
-        const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '信息上传中', background:'rgba(0,0,0,0.7)'});
+        console.log(allEmail);
+        const loading = this.$loading({
+          lock: true,
+          spinner: 'el-icon-loading',
+          text: '信息上传中',
+          background: 'rgba(0,0,0,0.7)'
+        });
         questionUpdate(this.form).then(response => {
           loading.close();
           this.open = false;
@@ -837,6 +855,18 @@
       seeCancel(form) {
         this.seeOpen = false;
         this.$refs[form].resetFields();
+      },
+      // 对otherEmail进行后缀添加
+      addPostfix(otherEmail){
+        const email = [];
+        for (let i = 0; i < otherEmail.length; i++){
+          email.push(otherEmail[i] + '@gree.com.cn')
+        }
+        return email;
+      },
+      // 按钮禁用
+      disableJudge(id){
+        return id > 0;
       }
     }
   }
