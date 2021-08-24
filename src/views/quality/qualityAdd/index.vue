@@ -423,14 +423,14 @@
               this.form.emailList = null;
             }
             console.log(allEmail)
-          /*  const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '信息上传中', background:'rgba(0,0,0,0.7)'});
+            const loading = this.$loading({lock: true, spinner:'el-icon-loading', text: '信息上传中', background:'rgba(0,0,0,0.7)'});
             questionAdd(this.form).then(response => {
               loading.close();
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
               //跳转至显示页面
               this.questionPath(response.data.id, allEmail);
-            });*/
+            });
           } else {
             console.log('error submit!!');
           }
