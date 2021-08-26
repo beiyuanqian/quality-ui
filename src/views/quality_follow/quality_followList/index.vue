@@ -4,7 +4,8 @@
       <el-row>
         <el-form-item label="责任科室" prop="officeId">
           <el-select v-model="queryParams.officeId" placeholder="请选择科室" size="small" clearable>
-            <el-option v-for="item in officeIdOptions" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+            <el-option v-for="item in officeIdOptions" :value="item.id" :label="item.deptName"
+                       :key="item.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="责任人" prop="resPerson">
@@ -32,7 +33,7 @@
           <el-select v-model="queryParams.submitter" clearable size="small" placeholder="请输入跟进人">
             <el-option v-for="dict in submitterList" :key="dict.id" :label="dict.name" :value="dict.id"/>
           </el-select>
-<!--          <el-input v-model="queryParams.submitter" placeholder="请输入下单人" clearable size="small"></el-input>-->
+          <!--          <el-input v-model="queryParams.submitter" placeholder="请输入下单人" clearable size="small"></el-input>-->
         </el-form-item>
         <el-form-item label="是否涉及其它产品" prop="relate">
           <el-select v-model="queryParams.relate" clearable size="small">
@@ -81,7 +82,12 @@
           {{row.status | statusNameFilter}}
         </template>
       </el-table-column>
-      <el-table-column prop="" label="维护状态" width="150" align="center"></el-table-column>
+      <el-table-column label="维护状态" width="150" align="center">
+        <template slot-scope="scope">
+<!--          {{dailyStatus(scope.row)}}-->
+          <span v-html="dailyStatus(scope.row)"></span>
+        </template>
+      </el-table-column>
       <el-table-column prop="quesTitle" label="问题主题" width="150" align="center"></el-table-column>
       <el-table-column prop="submitter" label="下单人" width="100" align="center">
         <template slot-scope="{row}">
@@ -101,8 +107,8 @@
         </template>
       </el-table-column>
       <el-table-column prop="content" label="最新进度" width="150" align="center">
-        <template slot-scope="{row}">
-          {{row.daily_follow[-1]}}
+        <template slot-scope="scope">
+          {{dailyContent(scope.row)}}
         </template>
       </el-table-column>
       <el-table-column prop="questionOrigin" label="问题来源" width="150" align="center"></el-table-column>
@@ -167,8 +173,9 @@
 
   let AllSubmitterName = [];
   let AllFollowPersonName = [];
-  let AllOfficeName=[];
-  let AllStatusName=[];
+  let AllOfficeName = [];
+  // let AllStatusName = [];
+  let AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "关闭"}];
   export default {
     name: "index",
     filters: {
@@ -276,14 +283,14 @@
           deptId: 5
         },
         //下单人列表
-        submitterList:[],
+        submitterList: [],
         // //跟进人选项
         // followPersonParams: {
         //   pageNum: 'all',
         //   deptId: 5
         // },
         //跟进人列表
-        followPersonList:[],
+        followPersonList: [],
       }
     },
     created() {
@@ -293,7 +300,7 @@
       //获取部门信息列表
       getDeptInfo() {
         listDept(this.officeIdParams).then(response => {
-          AllOfficeName=response.data;
+          AllOfficeName = response.data;
           this.officeIdOptions = response.data;
           this.getSubmitterList();
         })
@@ -307,18 +314,19 @@
       //加载全部人员信息
       getSubmitterList() {
         listUser(this.submitterParams).then(response => {
-          AllSubmitterName=response.data;
-          AllFollowPersonName=response.data;
+          AllSubmitterName = response.data;
+          AllFollowPersonName = response.data;
           this.submitterList = response.data;
           this.followPersonList = response.data;
-          this.getStatusList();
+          // this.getStatusList();
+          this.getQualityFollowList();
         })
       },
       //加载问题状态信息
-      getStatusList(){
-        AllStatusName=[{value:0,label:"未关闭"},{value:1,label:"关闭"}];
-        this.getQualityFollowList();
-      },
+      // getStatusList() {
+      //   AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "关闭"}];
+      //   this.getQualityFollowList();
+      // },
       /*多选框选中数据*/
       handleSelectionChange(selection) {
         this.ids = selection.map(item => item.id);
@@ -423,7 +431,7 @@
       getQualityFollowList() {
         this.loading = true;
         qualityFollowList(this.queryParams).then(response => {
-          console.log(response.data.results);
+          // console.log(response.data.results);
           this.qualityFollowList = response.data.results;
           this.total = response.data.count;
           this.loading = false;
@@ -453,8 +461,8 @@
         }).then(function () {
           return DailyProgressDelete(row.id);
         }).then(function () {
-          if(row.fileId > 0){
-           return delSaveFile(row.fileId);
+          if (row.fileId > 0) {
+            return delSaveFile(row.fileId);
           }
         }).then(() => {
           this.getQualityFollowList();
@@ -481,6 +489,51 @@
       //  查看问题取消
       seeCancel() {
         this.seeOpen = false;
+      },
+      // 判断问题维护状态
+      dailyStatus(row) {
+        // 判断问题状态
+        let updateDate;
+        let nowDate;
+        if (row.status === 0) {
+          // 获取最新维护时间
+          updateDate = this.dailyDateTime(row);
+          nowDate = this.getNowTime();
+          if (updateDate === nowDate){
+            return '<span>已维护每日进度</span>';
+          }else {
+            // return '未维护每日进度';
+            return '<span style="color: red">未维护每日进度</span>';
+          }
+
+        } else {
+          return '<span>已关闭</span>';
+        }
+      },
+      // 获取每日更新时间
+      dailyDateTime(row){
+        let updateTime = undefined;
+        for (let i = 0; i < row.daily_follow.length; i++) {
+          updateTime = row.daily_follow[i].create_datetime;
+        }
+        return updateTime.split(" ")[0];
+      },
+      // 获取最新的更新内容
+      dailyContent(row){
+        let updateContent = undefined;
+        for (let i = 0; i < row.daily_follow.length; i++){
+          updateContent = row.daily_follow[i].content;
+        }
+        return updateContent;
+      },
+      // 获取当前时间
+      getNowTime(){
+        const nowDate = new Date();
+        let year = nowDate.getFullYear();//年
+        let month = nowDate.getMonth() + 1;//注意！月份是从0月开始获取的，所以要+1;
+        let day = nowDate.getDate();//日
+        const todayDate = year + '-' + (month >= 10 ? month : '0' + month) + '-' + (day >= 10 ? day : '0' + day);
+        console.log(todayDate);
       }
     }
   }
