@@ -126,8 +126,8 @@
 </template>
 
 <script>
-  import {DailyProgressAdd} from "@/api/quality_follow/daily_progress";
-  import {qualityFollowAdd} from "@/api/quality_follow/quality_follow";
+  import {DailyProgressAdd, DailyProgressUpdate} from "@/api/quality_follow/daily_progress";
+  import {qualityFollowAdd, qualityFollowUpdate} from "@/api/quality_follow/quality_follow";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept, listDept} from "@/api/vadmin/permission/dept";
@@ -164,7 +164,7 @@
           deptId: 5
         },
         //跟进人列表
-        followPersonList:[],
+        followPersonList: [],
         //问题来源树选项
         questionOriginOptions: [
           {value: '厂内', label: '厂内'},
@@ -229,6 +229,7 @@
       this.getDeptInfo();
       this.getSubmitterInfo();
       this.getFollowPersonList();
+      // this.getUpdateInfo();
     },
     methods: {
       //加载全部人员信息
@@ -283,7 +284,7 @@
       // 自定义文件上传
       requestUpload(param) {
         let formData = new FormData();
-        formData.append("file", param.fileId);
+        formData.append("file", param.file);
         const loading = this.$loading({
           lock: true,
           spinner: 'el-icon-loading',
@@ -327,6 +328,18 @@
       disableJudge(id) {
         return id > 0;
       },
+      // //更新时列表信息
+      // getUpdateInfo() {
+      //   this.loading = true;
+      //   console.log(this.$route.query.row);
+      //   this.form = Object.assign({}, this.$route.query.row);
+      //   // DailyProgressList(this.form).then(response => {
+      //   //   this.keepList = response.data.results;
+      //   //   this.total = response.data.count;
+      //   //   this.loading = false;
+      //   // }).catch(err => {
+      //   // })
+      // },
       //提交表单
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {
@@ -338,6 +351,21 @@
               text: '信息上传中',
               background: 'rgba(0,0,0,0.7)'
             });
+            // if (this.form.id === parseInt(this.$route.query.row.id)) {
+            //   qualityFollowUpdate(this.form).then(response => {
+            //     this.params.questionFollow = response.data.id
+            //     this.params.userId = this.form.submitter
+            //     this.params.officeId = this.form.officeId
+            //     this.params.content = this.form.content
+            //     DailyProgressUpdate(this.params).then(response => {
+            //       loading.close();
+            //       this.msgSuccess("修改成功");
+            //       this.$refs[queryForm].resetFields();
+            //     })
+            //   })
+            // } else {
+            //
+            // }
             qualityFollowAdd(this.form).then(response => {
               this.params.questionFollow = response.data.id
               this.params.userId = this.form.submitter

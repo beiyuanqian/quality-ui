@@ -15,7 +15,7 @@
             <el-select v-model="form.userId" clearable size="small" placeholder="请选择处理人">
               <el-option v-for="dict in userIdList" :key="dict.id" :label="dict.name" :value="dict.id"/>
             </el-select>
-<!--            <el-input v-model="form.userName" placeholder="请输入处理人" clearable size="small"/>-->
+            <!--            <el-input v-model="form.userName" placeholder="请输入处理人" clearable size="small"/>-->
           </el-form-item>
           <el-form-item label="维护状态" prop="status">
             <el-select v-model="form.status" placeholder="请选择维护状态" size="small" clearable>
@@ -29,7 +29,8 @@
         </el-row>
         <el-row>
           <el-form-item label="每日答复" prop="content">
-            <el-input v-model="form.content" type="textarea" style="width: 825px" :autosize="{ minRows: 2}" placeholder="请输入每日答复"></el-input>
+            <el-input v-model="form.content" type="textarea" style="width: 825px" :autosize="{ minRows: 2}"
+                      placeholder="请输入每日答复"></el-input>
           </el-form-item>
         </el-row>
         <el-row>
@@ -79,7 +80,8 @@
         <el-descriptions-item label="是否涉及其它产品">{{description.relate}}</el-descriptions-item>
         <el-descriptions-item label="附件">{{description.fileName}}</el-descriptions-item>
         <el-descriptions-item label="科室">{{description.officeId | officeNameFilter}}</el-descriptions-item>
-        <el-descriptions-item label="科室跟进人">{{description.followPerson | followPersonNameFilter }}</el-descriptions-item>
+        <el-descriptions-item label="科室跟进人">{{description.followPerson | followPersonNameFilter }}
+        </el-descriptions-item>
         <el-descriptions-item label="问题来源">{{description.questionOrigin}}</el-descriptions-item>
         <el-descriptions-item label="问题主题">{{description.quesTitle}}</el-descriptions-item>
         <el-descriptions-item label="问题描述">{{description.quesDescription}}</el-descriptions-item>
@@ -96,15 +98,15 @@
 </template>
 
 <script>
-  import {DailyProgressAdd,DailyProgressList,DailyProgressGet} from "@/api/quality_follow/daily_progress";
+  import {DailyProgressAdd, DailyProgressList, DailyProgressGet} from "@/api/quality_follow/daily_progress";
   import {listDept} from "@/api/vadmin/permission/dept";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {listUser} from "@/api/vadmin/permission/user";
 
   let AllSubmitterName = [];
   let AllFollowPersonName = [];
-  let AllOfficeName=[];
-  let AllStatusName=[];
+  let AllOfficeName = [];
+  let AllStatusName = [];
   export default {
     name: "Index",
     filters: {
@@ -150,7 +152,7 @@
           deptId: 5
         },
         //跟进人列表
-        userIdList:[],
+        userIdList: [],
         //科室树选项
         officeIdParams: {
           pageNum: 'all',
@@ -168,16 +170,16 @@
           userId: undefined,
           status: undefined,
           content: undefined,
-          questionFollow:undefined,
+          questionFollow: undefined,
           fileId: undefined,
           fileName: undefined,
         },
         // 描述参数
         description: {},
         //跟进参数
-        FollowPrams:{
-          questionFollow:undefined,
-          pageNum:1,
+        FollowPrams: {
+          questionFollow: undefined,
+          pageNum: 1,
         },
         // 表单校验
         rules: {
@@ -196,7 +198,7 @@
       //获取部门信息列表
       getDeptInfo() {
         listDept(this.officeIdParams).then(response => {
-          AllOfficeName=response.data;
+          AllOfficeName = response.data;
           this.officeIdOptions = response.data;
           this.getUserIdList();
         })
@@ -204,16 +206,15 @@
       //加载全部人员信息
       getUserIdList() {
         listUser(this.userIdParams).then(response => {
-          AllSubmitterName=response.data;
-          AllFollowPersonName=response.data;
+          AllSubmitterName = response.data;
+          AllFollowPersonName = response.data;
           this.userIdList = response.data;
           this.getStatusList();
         })
       },
-
       //加载问题状态信息
-      getStatusList(){
-        AllStatusName=[{value:0,label:"未关闭"},{value:1,label:"关闭"}];
+      getStatusList() {
+        AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "关闭"}];
         this.getDescriptionList();
       },
       /*多选框选中数据*/
@@ -274,14 +275,14 @@
         this.$refs.upload.submit();
       },
       //已上传附件的删除
-      deleteAttachment(attachment, attachmentName) {
-        this.$confirm('是否确认删除名称为"' + attachmentName + '"的文件?', "警告", {
+      deleteAttachment(fileId, fileName) {
+        this.$confirm('是否确认删除名称为"' + fileName + '"的文件?', "警告", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
           type: "warning"
         }).then(function () {
           //删除文件内容
-          return delSaveFile(attachment);
+          return delSaveFile(fileId);
         }).then(() => {
           this.fileList = [];
           this.form.fileId = null;
@@ -296,7 +297,7 @@
       /*每日答复列表*/
       getDailyProgressList() {
         this.loading = true;
-        this.FollowPrams.questionFollow=parseInt(this.$route.query.row.id);
+        this.FollowPrams.questionFollow = parseInt(this.$route.query.row.id);
         DailyProgressList(this.FollowPrams).then(response => {
           this.keepList = response.data.results;
           this.total = response.data.count;
@@ -305,13 +306,13 @@
         })
       },
       //详情列表
-      getDescriptionList(){
+      getDescriptionList() {
         this.description = Object.assign({}, this.$route.query.row);
         console.log(this.description)
       },
       //提交表单
       onSubmit(queryForm) {
-        this.form.questionFollow=parseInt(this.$route.query.id)
+        this.form.questionFollow = parseInt(this.$route.query.id);
         this.$refs[queryForm].validate((valid) => {
           // 问题新增提交
           if (valid) {
@@ -326,9 +327,9 @@
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
             })
-              // //跳转至显示页面
-              // this.questionPath(response.data.id);
-            } else {
+            // //跳转至显示页面
+            // this.questionPath(response.data.id);
+          } else {
             console.log('error submit!!');
           }
         });

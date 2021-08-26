@@ -102,10 +102,17 @@
       </el-table-column>
       <el-table-column prop="content" label="最新进度" width="150" align="center">
         <template slot-scope="{row}">
-          {{row.id}}
+          {{row.daily_follow[-1]}}
         </template>
       </el-table-column>
       <el-table-column prop="questionOrigin" label="问题来源" width="150" align="center"></el-table-column>
+      <el-table-column prop="fileName" label="附件" width="150" align="center">
+        <template slot-scope="{row}">
+          <el-button type="text" @click="downloadTrigger(row)">
+            {{row.fileName}}
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <pagination v-show="total>0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize"
@@ -185,7 +192,6 @@
       },
       // 问题状态过滤器
       statusNameFilter(status) {
-        console.log(status)
         const Id = parseInt(status);
         const message = AllStatusName.find(item => item.value === Id);
         return message ? message.label : null
@@ -282,8 +288,6 @@
     },
     created() {
       this.getDeptInfo();
-
-
     },
     methods: {
       //获取部门信息列表
@@ -387,6 +391,25 @@
           this.msgSuccess("删除成功");
         })
       },
+      /*附件下载*/
+      downloadTrigger(row) {
+        const fileName = row.fileName;
+        getSaveFile(row.fileId).then(response => {
+          this.fileForm.fileName = fileName;
+          this.fileForm.filePath = response.data.file_url;
+          downloadFile(this.fileForm).then(response => {
+            const downloadElement = document.createElement("a");
+            let blob = new Blob([response], {type: 'application/octet-stream'});
+            let href = window.URL.createObjectURL(blob);
+            downloadElement.href = href;
+            downloadElement.download = fileName; //下载后文件名
+            document.body.appendChild(downloadElement);
+            downloadElement.click(); //点击下载
+            document.body.removeChild(downloadElement); //下载完成移除元素
+            window.URL.revokeObjectURL(href); //释放掉blob对象
+          })
+        })
+      },
       /*搜索提交*/
       handleQuery() {
         this.queryParams.pageNum = 1;
@@ -400,6 +423,7 @@
       getQualityFollowList() {
         this.loading = true;
         qualityFollowList(this.queryParams).then(response => {
+          console.log(response.data.results);
           this.qualityFollowList = response.data.results;
           this.total = response.data.count;
           this.loading = false;
@@ -412,8 +436,7 @@
       },
       /*修改*/
       updateQualityFollow(row) {
-        this.$router.push({path: '/quality_follow/quality_followAdd', query: {row: row}});
-
+        this.$router.push({path: '/quality_follow/quality_followAdd', query: {row: row}})
       },
       //质量跟进
       addPath_keep(row) {
@@ -429,6 +452,10 @@
           return qualityFollowDelete(row.id);
         }).then(function () {
           return DailyProgressDelete(row.id);
+        }).then(function () {
+          if(row.fileId > 0){
+           return delSaveFile(row.fileId);
+          }
         }).then(() => {
           this.getQualityFollowList();
           this.msgSuccess("删除成功");
