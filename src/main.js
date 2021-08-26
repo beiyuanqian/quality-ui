@@ -4,7 +4,8 @@ import Cookies from 'js-cookie'
 
 import Element from 'element-ui'
 import './assets/styles/element-variables.scss'
-
+import ECharts from 'vue-echarts' // vue-echarts
+import {use} from 'echarts/core'
 import '@/assets/styles/index.scss' // global css
 import '@/assets/styles/ruoyi.scss' // ruoyi css
 import App from './App'
@@ -36,22 +37,39 @@ import ModelDisplay from '@/components/ModelDisplay';
 import CommonIcon from '@/components/CommonIcon';
 import CommonStaticTable from '@/components/CommonStaticTable';
 import {getCrontabData, getIntervalData} from "./utils/validate"; // 通用图标组件
+//手动引入 ECharts 各模块来减小打包体积
+import {CanvasRenderer} from 'echarts/renderers'
+import {BarChart, PieChart, LineChart } from 'echarts/charts'
+import {GridComponent, TooltipComponent, TitleComponent, LegendComponent , ToolboxComponent } from 'echarts/components'
+
+
+use([
+  CanvasRenderer,
+  BarChart,
+  GridComponent,
+  TooltipComponent,
+  PieChart,
+  TitleComponent,
+  LegendComponent,
+  ToolboxComponent,
+  LineChart
+]);
 
 // 全局方法挂载
-Vue.prototype.getDicts = getDicts
-Vue.prototype.getConfigKey = getConfigKey
-Vue.prototype.parseTime = parseTime
-Vue.prototype.resetForm = resetForm
-Vue.prototype.addDateRange = addDateRange
-Vue.prototype.selectDictLabel = selectDictLabel
- Vue.prototype.selectDictDefault = selectDictDefault
-Vue.prototype.selectDictLabels = selectDictLabels
-Vue.prototype.getCrontabData = getCrontabData
-Vue.prototype.getIntervalData = getIntervalData
-Vue.prototype.download = download
-Vue.prototype.handleTree = handleTree
+Vue.prototype.getDicts = getDicts;
+Vue.prototype.getConfigKey = getConfigKey;
+Vue.prototype.parseTime = parseTime;
+Vue.prototype.resetForm = resetForm;
+Vue.prototype.addDateRange = addDateRange;
+Vue.prototype.selectDictLabel = selectDictLabel;
+Vue.prototype.selectDictDefault = selectDictDefault;
+Vue.prototype.selectDictLabels = selectDictLabels;
+Vue.prototype.getCrontabData = getCrontabData;
+Vue.prototype.getIntervalData = getIntervalData;
+Vue.prototype.download = download;
+Vue.prototype.handleTree = handleTree;
 Vue.prototype.hasPermi = function (values) {
-  const permissions = store.getters && store.getters.permissions
+  const permissions = store.getters && store.getters.permissions;
   return permissions.some(permission => {
     return "*:*:*" === permission || values.includes(permission)
   })
@@ -59,11 +77,11 @@ Vue.prototype.hasPermi = function (values) {
 
 Vue.prototype.msgSuccess = function (msg) {
   this.$message({showClose: true, message: msg, type: "success"});
-}
+};
 
 Vue.prototype.msgError = function (msg) {
   this.$message({showClose: true, message: msg, type: "error"});
-}
+};
 
 Vue.prototype.msgWarning = function (msg) {
   this.$message({showClose: true, message: msg, type: "warning"})
@@ -71,19 +89,22 @@ Vue.prototype.msgWarning = function (msg) {
 
 Vue.prototype.msgInfo = function (msg) {
   this.$message.info(msg);
-}
+};
 // 自定义组件
 Vue.component('small-dialog', SmallDialog);
 Vue.component('dept-tree', DeptTree);
 Vue.component('users-tree', UsersTree);
 Vue.component('model-display', ModelDisplay);
 // 全局组件挂载
-Vue.component('Pagination', Pagination)
-Vue.component('RightToolbar', RightToolbar)
+Vue.component('Pagination', Pagination);
+Vue.component('RightToolbar', RightToolbar);
 Vue.component('common-icon', CommonIcon);
 Vue.component('common-static-table', CommonStaticTable);
+// 加载vue-echartsz组件
+Vue.component('v-chart', ECharts);
 
-Vue.use(permission)
+
+Vue.use(permission);
 
 /**
  * If you don't want to use mock-server
@@ -96,13 +117,13 @@ Vue.use(permission)
 
 Vue.use(Element, {
   size: Cookies.get('size') || 'medium' // set element-ui default size
-})
+});
 
-Vue.config.productionTip = false
+Vue.config.productionTip = false;
 
 new Vue({
   el: '#app',
   router,
   store,
   render: h => h(App)
-})
+});

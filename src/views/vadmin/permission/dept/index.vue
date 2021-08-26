@@ -269,7 +269,7 @@ export default {
     /** 新增按钮操作 */
     handleAdd(row) {
       this.reset();
-      if (row != undefined) {
+      if (row !== undefined) {
         this.form.parentId = row.id;
       }
       this.open = true;
@@ -299,7 +299,7 @@ export default {
           if (cloneData.parentId===0){
             delete cloneData['parentId']
           }
-          if (this.form.id != undefined) {
+          if (this.form.id !== undefined) {
             updateDept(cloneData).then(response => {
               this.msgSuccess("修改成功");
               this.open = false;
