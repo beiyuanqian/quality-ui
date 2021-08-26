@@ -4,7 +4,7 @@
       <el-row>
         <el-form-item label="责任科室" prop="officeId">
           <el-select v-model="queryParams.officeId" placeholder="请选择科室" size="small" clearable>
-            <el-option v-for="item in officeIdList" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
+            <el-option v-for="item in officeIdOptions" :value="item.id" :label="item.deptName" :key="item.id"></el-option>
           </el-select>
         </el-form-item>
         <el-form-item label="责任人" prop="resPerson">
@@ -16,7 +16,7 @@
                        :key="item.value"></el-option>
           </el-select>
         </el-form-item>
-        <el-form-item label="状态" prop="status">
+        <el-form-item label="问题状态" prop="status">
           <el-select v-model="queryParams.status" clearable size="small">
             <el-option v-for="item in statusOptions" :key="item.value" :label="item.label" :value="item.value"/>
           </el-select>
@@ -29,7 +29,10 @@
                           style="width: 188px"></el-date-picker>
         </el-form-item>
         <el-form-item label="下单人" prop="submitter">
-          <el-input v-model="queryParams.submitter" placeholder="请输入下单人" clearable size="small"></el-input>
+          <el-select v-model="queryParams.submitter" clearable size="small" placeholder="请输入跟进人">
+            <el-option v-for="dict in submitterList" :key="dict.id" :label="dict.name" :value="dict.id"/>
+          </el-select>
+<!--          <el-input v-model="queryParams.submitter" placeholder="请输入下单人" clearable size="small"></el-input>-->
         </el-form-item>
         <el-form-item label="是否涉及其它产品" prop="relate">
           <el-select v-model="queryParams.relate" clearable size="small">
@@ -51,9 +54,9 @@
 
     <!--售后问题Table-->
     <el-table v-loading="loading" :data="qualityFollowList" @selection-change="handleSelectionChange"
-              style="width: 100%" :default-sort = "{prop: 'create_datetime', order: 'descending'}">
-      <el-table-column type="selection" width="45" align="center"></el-table-column>
-      <el-table-column label="序号" width="70px" align="center" fixed>
+              style="width: 100%" :default-sort="{prop: 'create_datetime', order: 'descending'}">
+      <el-table-column type="selection" width="30" align="center"></el-table-column>
+      <el-table-column label="序号" width="50px" align="center" fixed>
         <template slot-scope="scope">{{scope.$index+1}}</template>
       </el-table-column>
       <el-table-column label="操作" align="center" fixed width="240" class-name="small-padding fixed-width"
@@ -73,16 +76,43 @@
           </el-button>
         </template>
       </el-table-column>
-      <el-table-column prop="question_title" label="问题状态" width="150" align="center"></el-table-column>
-      <el-table-column prop="question_title" label="维护状态" width="150" align="center"></el-table-column>
-      <el-table-column prop="question_title" label="任务单号" width="150" align="center"></el-table-column>
+      <el-table-column prop="status" label="问题状态" width="150" align="center">
+        <template slot-scope="{row}">
+          {{row.status | statusNameFilter}}
+        </template>
+      </el-table-column>
+      <el-table-column prop="" label="维护状态" width="150" align="center"></el-table-column>
       <el-table-column prop="quesTitle" label="问题主题" width="150" align="center"></el-table-column>
-      <el-table-column prop="submitter" label="下单人" width="100" align="center"></el-table-column>
+      <el-table-column prop="submitter" label="下单人" width="100" align="center">
+        <template slot-scope="{row}">
+          {{row.submitter | submitterNameFilter}}
+        </template>
+      </el-table-column>
       <el-table-column prop="create_datetime" label="下单时间" width="180" align="center"></el-table-column>
+      <el-table-column prop="officeId" label="责任科室" width="150" align="center">
+        <template slot-scope="{row}">
+          {{row.officeId | officeNameFilter}}
+        </template>
+      </el-table-column>
       <el-table-column prop="resPerson" label="责任人" width="150" align="center"></el-table-column>
-      <el-table-column prop="followPerson" label="跟进人" width="150" align="center"></el-table-column>
-      <el-table-column prop="question_title" label="最新进度" width="150" align="center"></el-table-column>
+      <el-table-column prop="followPerson" label="跟进人" width="150" align="center">
+        <template slot-scope="{row}">
+          {{row.followPerson | followPersonNameFilter}}
+        </template>
+      </el-table-column>
+      <el-table-column prop="content" label="最新进度" width="150" align="center">
+        <template slot-scope="{row}">
+          {{row.daily_follow[-1]}}
+        </template>
+      </el-table-column>
       <el-table-column prop="questionOrigin" label="问题来源" width="150" align="center"></el-table-column>
+      <el-table-column prop="fileName" label="附件" width="150" align="center">
+        <template slot-scope="{row}">
+          <el-button type="text" @click="downloadTrigger(row)">
+            {{row.fileName}}
+          </el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <pagination v-show="total>0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize"
@@ -93,51 +123,80 @@
       <el-card shadow="always">
         <h2>任务单详情</h2>
         <el-descriptions class="margin-top" direction="vertical" :column="2" border>
-          <el-descriptions-item label="状态">{{form.question_title}}</el-descriptions-item>
-          <el-descriptions-item label="任务单号">{{form.machine_category}}</el-descriptions-item>
-          <el-descriptions-item label="发生时间">{{form.machine_name}}</el-descriptions-item>
-          <el-descriptions-item label="下单人">{{form.machine_num}}</el-descriptions-item>
-          <el-descriptions-item label="是否涉及其它产品">{{form.question_broad}}</el-descriptions-item>
-          <el-descriptions-item label="附件">{{form.question_slender}}</el-descriptions-item>
-          <el-descriptions-item label="科室">{{form.duty_dep_id }}</el-descriptions-item>
-          <el-descriptions-item label="科室跟进人">{{form.duty_office_id }}</el-descriptions-item>
-          <el-descriptions-item label="问题来源">{{form.duty_person}}</el-descriptions-item>
-          <el-descriptions-item label="问题主题">{{form.number}}</el-descriptions-item>
-          <el-descriptions-item label="问题描述">{{form.number}}</el-descriptions-item>
-          <el-descriptions-item label="原因分析">{{form.question_level}}</el-descriptions-item>
-          <el-descriptions-item label="临时方案">{{form.occur_time}}</el-descriptions-item>
-          <el-descriptions-item label="长期方案">{{form.question_origin}}</el-descriptions-item>
-          <el-descriptions-item label="预防措施">{{form.title_status}}</el-descriptions-item>
-          <el-descriptions-item label="详细计划(时间、节点)">{{form.black_point}}</el-descriptions-item>
-          <el-descriptions-item label="最新进度">{{form.question_schedule}}</el-descriptions-item>
+          <el-descriptions-item label="状态">{{form.status | statusNameFilter}}</el-descriptions-item>
+          <el-descriptions-item label="发生时间">{{form.occurTime}}</el-descriptions-item>
+          <el-descriptions-item label="下单人">{{form.submitter | submitterNameFilter}}</el-descriptions-item>
+          <el-descriptions-item label="是否涉及其它产品">{{form.relate}}</el-descriptions-item>
+          <el-descriptions-item label="附件">{{form.fileName}}</el-descriptions-item>
+          <el-descriptions-item label="科室">{{form.officeId | officeNameFilter }}</el-descriptions-item>
+          <el-descriptions-item label="科室跟进人">{{form.followPerson | followPersonNameFilter }}</el-descriptions-item>
+          <el-descriptions-item label="问题来源">{{form.questionOrigin}}</el-descriptions-item>
+          <el-descriptions-item label="问题主题">{{form.quesTitle}}</el-descriptions-item>
+          <el-descriptions-item label="问题描述">{{form.quesDescription}}</el-descriptions-item>
+          <el-descriptions-item label="原因分析">{{form.causeAnalysis}}</el-descriptions-item>
+          <el-descriptions-item label="临时方案">{{form.tempSolution}}</el-descriptions-item>
+          <el-descriptions-item label="长期方案">{{form.longSolution}}</el-descriptions-item>
+          <el-descriptions-item label="预防措施">{{form.alternative}}</el-descriptions-item>
+          <el-descriptions-item label="详细计划(时间、节点)">{{form.detailPlan}}</el-descriptions-item>
+          <el-descriptions-item label="最新进度">{{form.content}}</el-descriptions-item>
         </el-descriptions>
 
         <h2>每日进度查看</h2>
-        <el-table v-loading="loading" :data="qualityFollowList" style="width: 100%;text-align: center" border>
-          <el-table-column prop="machine_category" label="日期" align="center"></el-table-column>
-          <el-table-column prop="machine_category" label="用户名" width="100" align="center"></el-table-column>
-          <el-table-column prop="machine_category" label="名称" align="center"></el-table-column>
-          <el-table-column prop="machine_category" label="答复内容" align="center"></el-table-column>
-          <el-table-column prop="machine_category" label="附件" align="center"></el-table-column>
+        <el-table v-loading="loading" :data="keepList" style="width: 100%;text-align: center" border>
+          <el-table-column prop="create_datetime" label="日期" align="center"></el-table-column>
+          <el-table-column prop="userId" label="用户名" width="120" align="center"></el-table-column>
+          <el-table-column prop="status" label="名称" align="center"></el-table-column>
+          <el-table-column prop="content" label="答复内容" align="center"></el-table-column>
+          <el-table-column prop="fileName" label="附件" align="center"></el-table-column>
         </el-table>
       </el-card>
-
       <div slot="footer" class="dialog-footer">
-        <el-button @click="seeCancel('form')">关闭</el-button>
+        <el-button @click="seeCancel()">关闭</el-button>
       </div>
     </el-dialog>
   </div>
 </template>
 
 <script>
-  import {qualityFollowDelete, qualityFollowList, qualityFollowUpdate,} from '@/api/quality_follow/quality_follow';
+  import {DailyProgressList, DailyProgressGet, DailyProgressDelete} from "@/api/quality_follow/daily_progress";
+  import {qualityFollowDelete, qualityFollowList,} from '@/api/quality_follow/quality_follow';
   import {addSaveFile, downloadFile, getSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
+  import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {isInteger} from "@/utils/validate";
-  import {listUser} from "@/api/vadmin/permission/user";
+  import {listDept} from "@/api/vadmin/permission/dept";
 
-
+  let AllSubmitterName = [];
+  let AllFollowPersonName = [];
+  let AllOfficeName=[];
+  let AllStatusName=[];
   export default {
     name: "index",
+    filters: {
+      // 下单人名称过滤器
+      submitterNameFilter(submitter) {
+        const Id = parseInt(submitter);
+        const message = AllSubmitterName.find(item => item.id === Id);
+        return message ? message.name : null
+      },
+      // 跟进人名称过滤器
+      followPersonNameFilter(followPerson) {
+        const Id = parseInt(followPerson);
+        const message = AllFollowPersonName.find(item => item.id === Id);
+        return message ? message.name : null
+      },
+      // 部门名称过滤器
+      officeNameFilter(officeID) {
+        const Id = parseInt(officeID);
+        const message = AllOfficeName.find(item => item.id === Id);
+        return message ? message.deptName : null
+      },
+      // 问题状态过滤器
+      statusNameFilter(status) {
+        const Id = parseInt(status);
+        const message = AllStatusName.find(item => item.value === Id);
+        return message ? message.label : null
+      },
+    },
     data() {
       return {
         //遮罩层
@@ -152,18 +211,24 @@
         multiple: true,
         open: false,
         seeOpen: false,
+        keepList: [],
         //日期禁用
         pickerOptions: {
           disabledDate(time) {
             return time.getTime() > Date.now();
           }
         },
+        //部门树选项
+        officeIdParams: {
+          pageNum: 'all',
+          parentId: 5,
+        },
         //科室列表
-        officeIdList:[],
+        officeIdOptions: [],
         //状态列表
-        statusOptions:[
-          {value:0,label:"未关闭"},
-          {value: 1,label: "关闭"}
+        statusOptions: [
+          {value: 0, label: "未关闭"},
+          {value: 1, label: "关闭"}
         ],
         // 售后问题List
         qualityFollowList: [],
@@ -198,19 +263,62 @@
           pageNum: 1,
           pageSize: 10,
         },
-        // 修改提交参数
-        form: {
-          id: undefined,
+        // 描述参数
+        form: {},
+        //跟进参数
+        FollowPrams: {
+          questionFollow: undefined,
+          pageNum: 1,
         },
-        // 表单校验
-        rules: {},
-
+        //下单人选项
+        submitterParams: {
+          pageNum: 'all',
+          deptId: 5
+        },
+        //下单人列表
+        submitterList:[],
+        // //跟进人选项
+        // followPersonParams: {
+        //   pageNum: 'all',
+        //   deptId: 5
+        // },
+        //跟进人列表
+        followPersonList:[],
       }
     },
     created() {
-      this.getQualityFollowList()
+      this.getDeptInfo();
     },
     methods: {
+      //获取部门信息列表
+      getDeptInfo() {
+        listDept(this.officeIdParams).then(response => {
+          AllOfficeName=response.data;
+          this.officeIdOptions = response.data;
+          this.getSubmitterList();
+        })
+      },
+      // //加载列表跟进人人员信息
+      // getFollowPersonList() {
+      //   listUser(this.followPersonParams).then(response => {
+      //     this.followPersonList = response.data;
+      //   })
+      // },
+      //加载全部人员信息
+      getSubmitterList() {
+        listUser(this.submitterParams).then(response => {
+          AllSubmitterName=response.data;
+          AllFollowPersonName=response.data;
+          this.submitterList = response.data;
+          this.followPersonList = response.data;
+          this.getStatusList();
+        })
+      },
+      //加载问题状态信息
+      getStatusList(){
+        AllStatusName=[{value:0,label:"未关闭"},{value:1,label:"关闭"}];
+        this.getQualityFollowList();
+      },
       /*多选框选中数据*/
       handleSelectionChange(selection) {
         this.ids = selection.map(item => item.id);
@@ -253,8 +361,8 @@
         });
         addSaveFile(formData).then(response => {
           loading.close();
-          this.form.attachment = response.data.id;
-          this.form.attachmentName = response.data.name;
+          this.form.fileId = response.data.id;
+          this.form.fileName = response.data.name;
           if (response.msg === 'success') {
             this.msgSuccess('上传成功!');
 
@@ -268,8 +376,8 @@
         this.$refs.upload.submit();
       },
       //已上传附件的删除
-      deleteAttachment(attachment, attachmentName) {
-        this.$confirm('是否确认删除名称为"' + attachmentName + '"的文件?', "警告", {
+      deleteAttachment(fileId, fileName) {
+        this.$confirm('是否确认删除名称为"' + fileName + '"的文件?', "警告", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
           type: "warning"
@@ -278,9 +386,28 @@
           return delSaveFile(attachment);
         }).then(() => {
           this.fileList = [];
-          this.form.attachment = null;
-          this.form.attachmentName = null;
+          this.form.fileId = null;
+          this.form.fileName = null;
           this.msgSuccess("删除成功");
+        })
+      },
+      /*附件下载*/
+      downloadTrigger(row) {
+        const fileName = row.fileName;
+        getSaveFile(row.fileId).then(response => {
+          this.fileForm.fileName = fileName;
+          this.fileForm.filePath = response.data.file_url;
+          downloadFile(this.fileForm).then(response => {
+            const downloadElement = document.createElement("a");
+            let blob = new Blob([response], {type: 'application/octet-stream'});
+            let href = window.URL.createObjectURL(blob);
+            downloadElement.href = href;
+            downloadElement.download = fileName; //下载后文件名
+            document.body.appendChild(downloadElement);
+            downloadElement.click(); //点击下载
+            document.body.removeChild(downloadElement); //下载完成移除元素
+            window.URL.revokeObjectURL(href); //释放掉blob对象
+          })
         })
       },
       /*搜索提交*/
@@ -295,9 +422,8 @@
       /*问题搜索*/
       getQualityFollowList() {
         this.loading = true;
-        console.log(this.queryParams);
         qualityFollowList(this.queryParams).then(response => {
-          console.log(response.data)
+          console.log(response.data.results);
           this.qualityFollowList = response.data.results;
           this.total = response.data.count;
           this.loading = false;
@@ -310,11 +436,11 @@
       },
       /*修改*/
       updateQualityFollow(row) {
-        this.$router.push({path: '/quality_follow/quality_followAdd'});
-
+        this.$router.push({path: '/quality_follow/quality_followAdd', query: {row: row}})
       },
+      //质量跟进
       addPath_keep(row) {
-        this.$router.push({path: '/quality_follow/quality_followKeep'})
+        this.$router.push({path: '/quality_follow/quality_followKeep', query: {row: row}})
       },
       /*删除*/
       deleteQualityFollow(row) {
@@ -323,31 +449,38 @@
           cancelButtonText: "取消",
           type: "warning"
         }).then(function () {
-          console.log(row.id)
           return qualityFollowDelete(row.id);
+        }).then(function () {
+          return DailyProgressDelete(row.id);
+        }).then(function () {
+          if(row.fileId > 0){
+           return delSaveFile(row.fileId);
+          }
         }).then(() => {
           this.getQualityFollowList();
           this.msgSuccess("删除成功");
         })
       },
-      // 修改提交
-      submitForm(form) {
-
-      },
-      // 取消
-      cancel(form) {
-        this.open = false;
-        this.$refs[form].resetFields();
+      /*详情查看答复列表*/
+      getDailyProgressList(row) {
+        this.loading = true;
+        this.FollowPrams.questionFollow = row.id;
+        DailyProgressList(this.FollowPrams).then(response => {
+          this.keepList = response.data.results;
+          this.total = response.data.count;
+          this.loading = false;
+        }).catch(err => {
+        })
       },
       // 查看问题详情
       lookQualityFollow(row) {
         this.seeOpen = true;
-
+        this.form = Object.assign({}, row);
+        this.getDailyProgressList(row);
       },
       //  查看问题取消
-      seeCancel(form) {
+      seeCancel() {
         this.seeOpen = false;
-        this.$refs[form].resetFields();
       }
     }
   }

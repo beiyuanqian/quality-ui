@@ -20,7 +20,9 @@
           <el-input v-model="form.resPerson" clearable size="small" placeholder="请输入责任人" disabled/>
         </el-form-item>
         <el-form-item label="跟进人" prop="followPerson">
-          <el-input v-model="form.followPerson" clearable size="small" placeholder="请输入跟进人"/>
+          <el-select v-model="form.followPerson" clearable size="small" placeholder="请输入跟进人">
+            <el-option v-for="dict in followPersonList" :key="dict.id" :label="dict.name" :value="dict.id"/>
+          </el-select>
         </el-form-item>
         <el-form-item label="下单人" prop="userName">
           <el-input v-model="form.submitter_name" clearable size="small" placeholder="请输入下单人" disabled/>
@@ -124,10 +126,10 @@
 </template>
 
 <script>
-  import {DailyProgressAdd} from "@/api/quality_follow/daily_progress"
-  import {qualityFollowAdd} from "@/api/quality_follow/quality_follow";
+  import {DailyProgressAdd, DailyProgressUpdate} from "@/api/quality_follow/daily_progress";
+  import {qualityFollowAdd, qualityFollowUpdate} from "@/api/quality_follow/quality_follow";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
-  import {getUserProfile,} from "@/api/vadmin/permission/user";
+  import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept, listDept} from "@/api/vadmin/permission/dept";
 
 
@@ -156,6 +158,13 @@
         officeIdOptions: [],
         //责任人列表
         resPersonOptions: [],
+        //跟进人选项
+        followPersonParams: {
+          pageNum: 'all',
+          deptId: 5
+        },
+        //跟进人列表
+        followPersonList: [],
         //问题来源树选项
         questionOriginOptions: [
           {value: '厂内', label: '厂内'},
@@ -219,8 +228,16 @@
     created() {
       this.getDeptInfo();
       this.getSubmitterInfo();
+      this.getFollowPersonList();
+      // this.getUpdateInfo();
     },
     methods: {
+      //加载全部人员信息
+      getFollowPersonList() {
+        listUser(this.followPersonParams).then(response => {
+          this.followPersonList = response.data;
+        })
+      },
       // 获取下单人信息
       getSubmitterInfo() {
         getUserProfile().then(response => {
@@ -267,7 +284,7 @@
       // 自定义文件上传
       requestUpload(param) {
         let formData = new FormData();
-        formData.append("file", param.fileId);
+        formData.append("file", param.file);
         const loading = this.$loading({
           lock: true,
           spinner: 'el-icon-loading',
@@ -311,6 +328,18 @@
       disableJudge(id) {
         return id > 0;
       },
+      // //更新时列表信息
+      // getUpdateInfo() {
+      //   this.loading = true;
+      //   console.log(this.$route.query.row);
+      //   this.form = Object.assign({}, this.$route.query.row);
+      //   // DailyProgressList(this.form).then(response => {
+      //   //   this.keepList = response.data.results;
+      //   //   this.total = response.data.count;
+      //   //   this.loading = false;
+      //   // }).catch(err => {
+      //   // })
+      // },
       //提交表单
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {
@@ -322,13 +351,27 @@
               text: '信息上传中',
               background: 'rgba(0,0,0,0.7)'
             });
+            // if (this.form.id === parseInt(this.$route.query.row.id)) {
+            //   qualityFollowUpdate(this.form).then(response => {
+            //     this.params.questionFollow = response.data.id
+            //     this.params.userId = this.form.submitter
+            //     this.params.officeId = this.form.officeId
+            //     this.params.content = this.form.content
+            //     DailyProgressUpdate(this.params).then(response => {
+            //       loading.close();
+            //       this.msgSuccess("修改成功");
+            //       this.$refs[queryForm].resetFields();
+            //     })
+            //   })
+            // } else {
+            //
+            // }
             qualityFollowAdd(this.form).then(response => {
               this.params.questionFollow = response.data.id
               this.params.userId = this.form.submitter
               this.params.officeId = this.form.officeId
               this.params.content = this.form.content
               DailyProgressAdd(this.params).then(response => {
-                console.log(response.data)
                 loading.close();
                 this.msgSuccess("新增成功");
                 this.$refs[queryForm].resetFields();
