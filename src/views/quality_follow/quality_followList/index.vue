@@ -248,13 +248,11 @@
         fileList: [],
         //关闭与否树选项
         relateOptions: [
-          {value: '所有', label: '所有'},
           {value: '否', label: '否'},
           {value: '是', label: '是'}
         ],
         //问题来源树选项
         questionOriginOptions: [
-          {value: '所有', label: '所有'},
           {value: '厂内', label: '厂内'},
           {value: '厂外', label: '厂外'}
         ],
