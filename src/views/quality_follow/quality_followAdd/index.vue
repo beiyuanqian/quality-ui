@@ -20,7 +20,9 @@
           <el-input v-model="form.resPerson" clearable size="small" placeholder="请输入责任人" disabled/>
         </el-form-item>
         <el-form-item label="跟进人" prop="followPerson">
-          <el-input v-model="form.followPerson" clearable size="small" placeholder="请输入跟进人"/>
+          <el-select v-model="form.followPerson" clearable size="small" placeholder="请输入跟进人">
+            <el-option v-for="dict in followPersonList" :key="dict.id" :label="dict.name" :value="dict.id"/>
+          </el-select>
         </el-form-item>
         <el-form-item label="下单人" prop="userName">
           <el-input v-model="form.submitter_name" clearable size="small" placeholder="请输入下单人" disabled/>
@@ -124,10 +126,10 @@
 </template>
 
 <script>
-  import {DailyProgressAdd} from "@/api/quality_follow/daily_progress"
+  import {DailyProgressAdd} from "@/api/quality_follow/daily_progress";
   import {qualityFollowAdd} from "@/api/quality_follow/quality_follow";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
-  import {getUserProfile,} from "@/api/vadmin/permission/user";
+  import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept, listDept} from "@/api/vadmin/permission/dept";
 
 
@@ -156,6 +158,13 @@
         officeIdOptions: [],
         //责任人列表
         resPersonOptions: [],
+        //跟进人选项
+        followPersonParams: {
+          pageNum: 'all',
+          deptId: 5
+        },
+        //跟进人列表
+        followPersonList:[],
         //问题来源树选项
         questionOriginOptions: [
           {value: '厂内', label: '厂内'},
@@ -219,8 +228,15 @@
     created() {
       this.getDeptInfo();
       this.getSubmitterInfo();
+      this.getFollowPersonList();
     },
     methods: {
+      //加载全部人员信息
+      getFollowPersonList() {
+        listUser(this.followPersonParams).then(response => {
+          this.followPersonList = response.data;
+        })
+      },
       // 获取下单人信息
       getSubmitterInfo() {
         getUserProfile().then(response => {
@@ -328,7 +344,6 @@
               this.params.officeId = this.form.officeId
               this.params.content = this.form.content
               DailyProgressAdd(this.params).then(response => {
-                console.log(response.data)
                 loading.close();
                 this.msgSuccess("新增成功");
                 this.$refs[queryForm].resetFields();
