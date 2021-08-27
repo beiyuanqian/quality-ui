@@ -28,7 +28,7 @@ export function qualityFollowAdd(data) {
 //问题跟进update
 export function qualityFollowUpdate(data) {
   return request({
-    url:'/qualityFollow/qualityFollow/'+ data.id + '/',
+    url:'/qualityFollow/questionFollow/'+ data.id + '/',
     method: 'put',
     data: data
   })
