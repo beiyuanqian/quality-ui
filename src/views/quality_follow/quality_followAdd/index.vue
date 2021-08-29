@@ -126,7 +126,7 @@
 </template>
 
 <script>
-  import {DailyProgressAdd, DailyProgressUpdate} from "@/api/quality_follow/daily_progress";
+  import {DailyProgressAdd,} from "@/api/quality_follow/daily_progress";
   import {qualityFollowAdd, qualityFollowGet,qualityFollowUpdate} from "@/api/quality_follow/quality_follow";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
@@ -363,7 +363,7 @@
                 loading.close();
                 this.msgSuccess("修改成功");
                 this.$refs[queryForm].resetFields();
-              })
+              })``
           } else {
               qualityFollowAdd(this.form).then(response => {
                 this.params.questionFollow = response.data.id;

@@ -183,8 +183,7 @@
   let AllSubmitterName = [];
   let AllFollowPersonName = [];
   let AllOfficeName = [];
-  // let AllStatusName = [];
-  let AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "关闭"}];
+  let AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "已关闭"}];
   export default {
     name: "index",
     filters: {
@@ -245,8 +244,6 @@
         statusOptions: [
           {value: 0, label: "未关闭"},
           {value: 1, label: "已关闭"},
-          {value: 2, label: "申请关闭"},
-          {value: 3, label: "驳回关闭"},
         ],
         // 售后问题List
         qualityFollowList: [],
@@ -331,11 +328,6 @@
           this.getQualityFollowList();
         })
       },
-      //加载问题状态信息
-      // getStatusList() {
-      //   AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "关闭"}];
-      //   this.getQualityFollowList();
-      // },
       /*多选框选中数据*/
       handleSelectionChange(selection) {
         this.ids = selection.map(item => item.id);
@@ -480,7 +472,6 @@
       },
       /*详情查看答复列表*/
       getDailyProgressList(row) {
-        console.log(row)
         this.loading = true;
         this.FollowPrams.questionFollow = row.id;
         DailyProgressList(this.FollowPrams).then(response => {
@@ -516,7 +507,6 @@
             // return '未维护每日进度';
             return '<span style="color: red">未维护每日进度</span>';
           }
-
         } else {
           return '<span>已关闭</span>';
         }

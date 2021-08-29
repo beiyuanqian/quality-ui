@@ -185,6 +185,15 @@
           {value: "每日答复", label: "每日答复"},
           {value: "申请关闭", label: "申请关闭"},
         ],
+        // 描述参数
+        description: {},
+        //跟进参数
+        FollowPrams: {
+          questionFollow: undefined,
+          pageNum: 1,
+        },
+        //每日进度关闭后修改问题的状态
+        params:{},
         // 表单参数
         form: {
           officeId: undefined,
@@ -194,13 +203,6 @@
           questionFollow: undefined,
           fileId: undefined,
           fileName: undefined,
-        },
-        // 描述参数
-        description: {},
-        //跟进参数
-        FollowPrams: {
-          questionFollow: undefined,
-          pageNum: 1,
         },
         // 表单校验
         rules: {
@@ -242,8 +244,7 @@
       },
       //加载问题状态信息
       getStatusList() {
-        AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "已关闭"},
-          {value: 2, label: "申请关闭"}, {value: 3, label: "驳回关闭"}];
+        AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "已关闭"},];
         this.getDailyProgressList();
         this.getDescriptionList();
       },
@@ -334,24 +335,21 @@
           this.form.questionFollow = parseInt(this.$route.query.id);
           this.form.status = "批准关闭";
           this.form.content = "OK";
+          //获取权限管理员信息
           getUserProfile().then(response => {
             this.form.officeId=response.data.deptId;
             this.form.userId = response.data.id;
+            //同意时添加一条同意进度
             DailyProgressAdd(this.form).then(response => {
+              console.log(response.data);
               this.getDailyProgressList();
               this.getDescriptionList();
               this.msgSuccess("批准关闭");
-
             });
           });
-
         })
-
-        // }).then(() => {
-        //   this.getQualityFollowList();
-        //   this.msgSuccess("删除成功");
-        // })
       },
+      //驳回关闭
       rejectQualityFollow(){
 
       },
