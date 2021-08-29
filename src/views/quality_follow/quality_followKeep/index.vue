@@ -15,7 +15,6 @@
             <el-select v-model="form.userId" clearable size="small" placeholder="请选择处理人">
               <el-option v-for="dict in userIdList" :key="dict.id" :label="dict.name" :value="dict.id"/>
             </el-select>
-            <!--            <el-input v-model="form.userName" placeholder="请输入处理人" clearable size="small"/>-->
           </el-form-item>
           <el-form-item label="维护状态" prop="status">
             <el-select v-model="form.status" placeholder="请选择维护状态" size="small" clearable>
@@ -65,12 +64,32 @@
       </el-form>
       <h2>每日进度查看</h2>
       <el-table v-loading="loading" :data="keepList" style="width: 100%;text-align: center" border
-                @selection-change="handleFollowChange">
+                @selection-change="handleFollowChange" :default-sort="{prop: 'create_datetime', order: 'ascending'}">
         <el-table-column prop="create_datetime" label="日期" align="center"></el-table-column>
-        <el-table-column prop="userId" label="用户名" width="200" align="center"></el-table-column>
+        <el-table-column prop="officeId" label="科室" align="center">
+          <template slot-scope="{row}">
+            {{row.officeId | officeNameFilter}}
+          </template>
+        </el-table-column>
+        <el-table-column prop="userId" label="用户名" width="200" align="center">
+          <template slot-scope="{row}">
+            {{row.userId | followPersonNameFilter}}
+          </template>
+        </el-table-column>
         <el-table-column prop="status" label="名称" align="center"></el-table-column>
         <el-table-column prop="content" label="答复内容" align="center"></el-table-column>
         <el-table-column prop="fileName" label="附件" align="center"></el-table-column>
+        <el-table-column label="操作" align="center" fixed="right" width="240" class-name="small-padding fixed-width"
+                         v-if="hasPermi(['quality:question:{id}:put','quality:question:{id}:post',])">
+          <template slot-scope="scope">
+            <el-button size="mini" type="text" icon="el-icon-view" v-hasPermi="['quality:question:get']"
+                       @click="agreeQualityFollow(scope.row)" v-if="scope.row.status==='申请关闭'">同意
+            </el-button>
+            <el-button size="mini" type="text" icon="el-icon-edit" v-hasPermi="['quality:question:{id}:put']"
+                       @click="rejectQualityFollow(scope.row)" v-if="scope.row.status==='申请关闭'">驳回
+            </el-button>
+          </template>
+        </el-table-column>
       </el-table>
       <h2>任务单详情</h2>
       <el-descriptions class="margin-top" direction="vertical" :column="2" border>
@@ -80,8 +99,7 @@
         <el-descriptions-item label="是否涉及其它产品">{{description.relate}}</el-descriptions-item>
         <el-descriptions-item label="附件">{{description.fileName}}</el-descriptions-item>
         <el-descriptions-item label="科室">{{description.officeId | officeNameFilter}}</el-descriptions-item>
-        <el-descriptions-item label="科室跟进人">{{description.followPerson | followPersonNameFilter }}
-        </el-descriptions-item>
+        <el-descriptions-item label="科室跟进人">{{description.followPerson | followPersonNameFilter }}</el-descriptions-item>
         <el-descriptions-item label="问题来源">{{description.questionOrigin}}</el-descriptions-item>
         <el-descriptions-item label="问题主题">{{description.quesTitle}}</el-descriptions-item>
         <el-descriptions-item label="问题描述">{{description.quesDescription}}</el-descriptions-item>
@@ -98,12 +116,14 @@
 </template>
 
 <script>
-  import {DailyProgressAdd, DailyProgressList, DailyProgressGet} from "@/api/quality_follow/daily_progress";
+  import {DailyProgressAdd, DailyProgressList,DailyProgressGet} from "@/api/quality_follow/daily_progress";
+  import {qualityFollowGet,qualityFollowUpdate} from '@/api/quality_follow/quality_follow';
   import {listDept} from "@/api/vadmin/permission/dept";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
-  import {listUser} from "@/api/vadmin/permission/user";
+  import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
 
   let AllSubmitterName = [];
+  let AllPercentName=[];
   let AllFollowPersonName = [];
   let AllOfficeName = [];
   let AllStatusName = [];
@@ -130,7 +150,7 @@
       },
       // 问题状态过滤器
       statusNameFilter(status) {
-        console.log(status)
+        // console.log(status);
         const Id = parseInt(status);
         const message = AllStatusName.find(item => item.value === Id);
         return message ? message.label : null
@@ -149,7 +169,7 @@
         //处理人列表
         userIdParams: {
           pageNum: 'all',
-          deptId: 5
+          // deptId: 5
         },
         //跟进人列表
         userIdList: [],
@@ -163,7 +183,17 @@
         //维护状态选择
         statusList: [
           {value: "每日答复", label: "每日答复"},
+          {value: "申请关闭", label: "申请关闭"},
         ],
+        // 描述参数
+        description: {},
+        //跟进参数
+        FollowPrams: {
+          questionFollow: undefined,
+          pageNum: 1,
+        },
+        //每日进度关闭后修改问题的状态
+        params:{},
         // 表单参数
         form: {
           officeId: undefined,
@@ -173,13 +203,6 @@
           questionFollow: undefined,
           fileId: undefined,
           fileName: undefined,
-        },
-        // 描述参数
-        description: {},
-        //跟进参数
-        FollowPrams: {
-          questionFollow: undefined,
-          pageNum: 1,
         },
         // 表单校验
         rules: {
@@ -192,9 +215,16 @@
     },
     created() {
       this.getDeptInfo();
-      this.getDailyProgressList();
     },
     methods: {
+      // // 获取当前人员信息
+      // getPercentInfo() {
+      //   getUserProfile().then(response => {
+      //     // AllPercentName=response.data;
+      //     console.log(response.data);
+      //     this.form.userId = response.data.id
+      //   })
+      // },
       //获取部门信息列表
       getDeptInfo() {
         listDept(this.officeIdParams).then(response => {
@@ -214,7 +244,8 @@
       },
       //加载问题状态信息
       getStatusList() {
-        AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "关闭"}];
+        AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "已关闭"},];
+        this.getDailyProgressList();
         this.getDescriptionList();
       },
       /*多选框选中数据*/
@@ -242,10 +273,10 @@
       },
       // 文件上传钩子
       handleRemove(file, fileList) {
-        console.log(file, fileList);
+        // console.log(file, fileList);
       },
       handlePreview(file) {
-        console.log(file);
+        // console.log(file);
       },
       // 自定义文件上传
       requestUpload(param) {
@@ -294,12 +325,40 @@
       disableJudge(id) {
         return id > 0;
       },
+      /*同意关闭每日进度*/
+      agreeQualityFollow() {
+        this.$confirm('是否同意关闭名称为"' + "quesTitle" + '"的每日进度?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(() => {
+          this.form.questionFollow = parseInt(this.$route.query.id);
+          this.form.status = "批准关闭";
+          this.form.content = "OK";
+          //获取权限管理员信息
+          getUserProfile().then(response => {
+            this.form.officeId=response.data.deptId;
+            this.form.userId = response.data.id;
+            //同意时添加一条同意进度
+            DailyProgressAdd(this.form).then(response => {
+              console.log(response.data);
+              this.getDailyProgressList();
+              this.getDescriptionList();
+              this.msgSuccess("批准关闭");
+            });
+          });
+        })
+      },
+      //驳回关闭
+      rejectQualityFollow(){
+
+      },
       /*每日答复列表*/
       getDailyProgressList() {
         this.loading = true;
-        this.FollowPrams.questionFollow = parseInt(this.$route.query.row.id);
-        DailyProgressList(this.FollowPrams).then(response => {
-          this.keepList = response.data.results;
+        qualityFollowGet(parseInt(this.$route.query.id)).then(response=>{
+          // console.log(response.data.daily_follow)
+          this.keepList =response.data.daily_follow;
           this.total = response.data.count;
           this.loading = false;
         }).catch(err => {
@@ -307,8 +366,11 @@
       },
       //详情列表
       getDescriptionList() {
-        this.description = Object.assign({}, this.$route.query.row);
-        console.log(this.description)
+        this.description.id=parseInt(this.$route.query.id);
+        qualityFollowGet(this.description.id).then(response=>{
+          this.description =response.data;
+          this.description.content=response.data.daily_follow.slice(-1)[0].content;
+        })
       },
       //提交表单
       onSubmit(queryForm) {
@@ -323,10 +385,13 @@
               background: 'rgba(0,0,0,0.7)'
             });
             DailyProgressAdd(this.form).then(response => {
+              this.getDailyProgressList();
+              this.getDescriptionList();
               loading.close();
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
-            })
+            });
+
             // //跳转至显示页面
             // this.questionPath(response.data.id);
           } else {

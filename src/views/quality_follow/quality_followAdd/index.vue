@@ -89,7 +89,7 @@
       <el-row>
         <el-form-item label="最新进度" prop="content">
           <el-input v-model="form.content" type="textarea" style="width: 905px" :autosize="{ minRows: 2}"
-                    placeholder="请输入最新进度"></el-input>
+                    placeholder="请输入最新进度" :disabled="disabled"></el-input>
         </el-form-item>
       </el-row>
       <el-row>
@@ -115,7 +115,7 @@
       <el-form-item>
         <div style="margin: 0 500px;"></div>
         <el-button type="primary" @click="onSubmit('queryForm')">提交</el-button>
-        <el-button @click="resetForm('queryForm')">重置</el-button>
+        <el-button @click="resetForm('queryForm')" :disabled="disabled">重置</el-button>
       </el-form-item>
       <el-form-item>
         <el-input v-model="form.fileId" type="hidden"></el-input>
@@ -126,8 +126,8 @@
 </template>
 
 <script>
-  import {DailyProgressAdd, DailyProgressUpdate} from "@/api/quality_follow/daily_progress";
-  import {qualityFollowAdd, qualityFollowUpdate} from "@/api/quality_follow/quality_follow";
+  import {DailyProgressAdd,} from "@/api/quality_follow/daily_progress";
+  import {qualityFollowAdd, qualityFollowGet,qualityFollowUpdate} from "@/api/quality_follow/quality_follow";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept, listDept} from "@/api/vadmin/permission/dept";
@@ -141,6 +141,8 @@
         loading: true,
         //对齐方式
         labelPosition: 'right',
+        //最新进度
+        disabled:false,
         //附件列表
         fileList: [],
         //日期禁用
@@ -226,10 +228,7 @@
       }
     },
     created() {
-      this.getDeptInfo();
-      this.getSubmitterInfo();
-      this.getFollowPersonList();
-      // this.getUpdateInfo();
+      this.getJudgement();
     },
     methods: {
       //加载全部人员信息
@@ -241,7 +240,7 @@
       // 获取下单人信息
       getSubmitterInfo() {
         getUserProfile().then(response => {
-          this.form.submitter_name = response.data.name
+          this.form.submitter_name = response.data.name;
           this.form.submitter = response.data.id
         })
       },
@@ -328,18 +327,26 @@
       disableJudge(id) {
         return id > 0;
       },
-      // //更新时列表信息
-      // getUpdateInfo() {
-      //   this.loading = true;
-      //   console.log(this.$route.query.row);
-      //   this.form = Object.assign({}, this.$route.query.row);
-      //   // DailyProgressList(this.form).then(response => {
-      //   //   this.keepList = response.data.results;
-      //   //   this.total = response.data.count;
-      //   //   this.loading = false;
-      //   // }).catch(err => {
-      //   // })
-      // },
+      //判断是更新还是新增
+      getJudgement(){
+        if(this.$route.query.id){
+          this.loading = true;
+          qualityFollowGet(parseInt(this.$route.query.id)).then(response=>{
+            this.disabled=true;
+            this.form =response.data;
+            this.form.content=response.data.daily_follow.slice(-1)[0].content;
+            this.getDeptInfo();
+            this.getSubmitterInfo();
+            this.getFollowPersonList();
+            this.loading = false;
+          }).catch(err => {
+          })
+        }else{
+          this.getDeptInfo();
+          this.getSubmitterInfo();
+          this.getFollowPersonList();
+        }
+      },
       //提交表单
       onSubmit(queryForm) {
         this.$refs[queryForm].validate((valid) => {
@@ -351,47 +358,34 @@
               text: '信息上传中',
               background: 'rgba(0,0,0,0.7)'
             });
-            // if (this.form.id === parseInt(this.$route.query.row.id)) {
-            //   qualityFollowUpdate(this.form).then(response => {
-            //     this.params.questionFollow = response.data.id
-            //     this.params.userId = this.form.submitter
-            //     this.params.officeId = this.form.officeId
-            //     this.params.content = this.form.content
-            //     DailyProgressUpdate(this.params).then(response => {
-            //       loading.close();
-            //       this.msgSuccess("修改成功");
-            //       this.$refs[queryForm].resetFields();
-            //     })
-            //   })
-            // } else {
-            //
-            // }
-            qualityFollowAdd(this.form).then(response => {
-              this.params.questionFollow = response.data.id
-              this.params.userId = this.form.submitter
-              this.params.officeId = this.form.officeId
-              this.params.content = this.form.content
-              DailyProgressAdd(this.params).then(response => {
+            if (this.$route.query.id) {
+              qualityFollowUpdate(this.form).then(response => {
                 loading.close();
-                this.msgSuccess("新增成功");
+                this.msgSuccess("修改成功");
                 this.$refs[queryForm].resetFields();
-              })
-              // //跳转至显示页面
-              // this.questionPath(response.data.id);
-            });
+              })``
+          } else {
+              qualityFollowAdd(this.form).then(response => {
+                this.params.questionFollow = response.data.id;
+                this.params.userId = this.form.submitter;
+                this.params.officeId = this.form.officeId;
+                this.params.content = this.form.content;
+                DailyProgressAdd(this.params).then(response => {
+                  loading.close();
+                  this.msgSuccess("新增成功");
+                  this.$refs[queryForm].resetFields();
+                })
+              });
+            }
           } else {
             console.log('error submit!!');
           }
-        });
+          });
       },
       //点击取消重置表单内容
       resetForm(queryForm) {
         this.$refs[queryForm].resetFields();
       },
-      // questionPath(questionId, allEmail) {
-      //   this.$router.push({path: 'quality_followList', query: {questionId: questionId}});
-      // }
-
     },
   };
 </script>

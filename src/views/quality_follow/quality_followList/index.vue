@@ -84,11 +84,13 @@
       </el-table-column>
       <el-table-column label="维护状态" width="150" align="center">
         <template slot-scope="scope">
-<!--          {{dailyStatus(scope.row)}}-->
+          <!--          {{dailyStatus(scope.row)}}-->
           <span v-html="dailyStatus(scope.row)"></span>
         </template>
       </el-table-column>
       <el-table-column prop="quesTitle" label="问题主题" width="150" align="center"></el-table-column>
+      <el-table-column prop="quesDescription" label="问题描述" width="150" align="center"></el-table-column>
+      <el-table-column prop="occurTime" label="发生时间" width="150" align="center"></el-table-column>
       <el-table-column prop="submitter" label="下单人" width="100" align="center">
         <template slot-scope="{row}">
           {{row.submitter | submitterNameFilter}}
@@ -107,6 +109,9 @@
         </template>
       </el-table-column>
       <el-table-column prop="content" label="最新进度" width="150" align="center">
+        <!--        <template slot-scope="{row}">-->
+        <!--          {{row.daily_follow.slice(-1)[0].content}}-->
+        <!--        </template>-->
         <template slot-scope="scope">
           {{dailyContent(scope.row)}}
         </template>
@@ -146,11 +151,15 @@
           <el-descriptions-item label="详细计划(时间、节点)">{{form.detailPlan}}</el-descriptions-item>
           <el-descriptions-item label="最新进度">{{form.content}}</el-descriptions-item>
         </el-descriptions>
-
         <h2>每日进度查看</h2>
-        <el-table v-loading="loading" :data="keepList" style="width: 100%;text-align: center" border>
+        <el-table v-loading="loading" :data="keepList" style="width: 100%;text-align: center" border
+                  :default-sort="{prop: 'create_datetime', order: 'ascending'}">
           <el-table-column prop="create_datetime" label="日期" align="center"></el-table-column>
-          <el-table-column prop="userId" label="用户名" width="120" align="center"></el-table-column>
+          <el-table-column prop="userId" label="用户名" width="120" align="center">
+            <template slot-scope="{row}">
+              {{row.userId | followPersonNameFilter}}
+            </template>
+          </el-table-column>
           <el-table-column prop="status" label="名称" align="center"></el-table-column>
           <el-table-column prop="content" label="答复内容" align="center"></el-table-column>
           <el-table-column prop="fileName" label="附件" align="center"></el-table-column>
@@ -174,8 +183,7 @@
   let AllSubmitterName = [];
   let AllFollowPersonName = [];
   let AllOfficeName = [];
-  // let AllStatusName = [];
-  let AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "关闭"}];
+  let AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "已关闭"}];
   export default {
     name: "index",
     filters: {
@@ -235,7 +243,7 @@
         //状态列表
         statusOptions: [
           {value: 0, label: "未关闭"},
-          {value: 1, label: "关闭"}
+          {value: 1, label: "已关闭"},
         ],
         // 售后问题List
         qualityFollowList: [],
@@ -278,7 +286,7 @@
         //下单人选项
         submitterParams: {
           pageNum: 'all',
-          deptId: 5
+          // deptId: 5
         },
         //下单人列表
         submitterList: [],
@@ -320,11 +328,6 @@
           this.getQualityFollowList();
         })
       },
-      //加载问题状态信息
-      // getStatusList() {
-      //   AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "关闭"}];
-      //   this.getQualityFollowList();
-      // },
       /*多选框选中数据*/
       handleSelectionChange(selection) {
         this.ids = selection.map(item => item.id);
@@ -429,7 +432,7 @@
       getQualityFollowList() {
         this.loading = true;
         qualityFollowList(this.queryParams).then(response => {
-          // console.log(response.data.results);
+          // console.log(response.data.results[0].daily_follow.slice(-1)[0].content);
           this.qualityFollowList = response.data.results;
           this.total = response.data.count;
           this.loading = false;
@@ -442,11 +445,11 @@
       },
       /*修改*/
       updateQualityFollow(row) {
-        this.$router.push({path: '/quality_follow/quality_followAdd', query: {row: row}})
+        this.$router.push({path: '/quality_follow/quality_followAdd', query: {id: row.id}})
       },
       //质量跟进
       addPath_keep(row) {
-        this.$router.push({path: '/quality_follow/quality_followKeep', query: {row: row}})
+        this.$router.push({path: '/quality_follow/quality_followKeep', query: {id: row.id}})
       },
       /*删除*/
       deleteQualityFollow(row) {
@@ -482,6 +485,7 @@
       lookQualityFollow(row) {
         this.seeOpen = true;
         this.form = Object.assign({}, row);
+        this.form.content = row.daily_follow.slice(-1)[0].content;
         this.getDailyProgressList(row);
       },
       //  查看问题取消
@@ -497,19 +501,18 @@
           // 获取最新维护时间
           updateDate = this.dailyDateTime(row);
           nowDate = this.getNowTime();
-          if (updateDate === nowDate){
+          if (updateDate === nowDate) {
             return '<span>已维护每日进度</span>';
-          }else {
+          } else {
             // return '未维护每日进度';
             return '<span style="color: red">未维护每日进度</span>';
           }
-
         } else {
           return '<span>已关闭</span>';
         }
       },
       // 获取每日更新时间
-      dailyDateTime(row){
+      dailyDateTime(row) {
         let updateTime = undefined;
         for (let i = 0; i < row.daily_follow.length; i++) {
           updateTime = row.daily_follow[i].create_datetime;
@@ -517,15 +520,15 @@
         return updateTime.split(" ")[0];
       },
       // 获取最新的更新内容
-      dailyContent(row){
+      dailyContent(row) {
         let updateContent = undefined;
-        for (let i = 0; i < row.daily_follow.length; i++){
+        for (let i = 0; i < row.daily_follow.length; i++) {
           updateContent = row.daily_follow[i].content;
         }
         return updateContent;
       },
       // 获取当前时间
-      getNowTime(){
+      getNowTime() {
         const nowDate = new Date();
         let year = nowDate.getFullYear();//年
         let month = nowDate.getMonth() + 1;//注意！月份是从0月开始获取的，所以要+1;
