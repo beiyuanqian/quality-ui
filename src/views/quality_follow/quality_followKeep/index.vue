@@ -80,13 +80,13 @@
         <el-table-column prop="content" label="答复内容" align="center"></el-table-column>
         <el-table-column prop="fileName" label="附件" align="center"></el-table-column>
         <el-table-column label="操作" align="center" fixed="right" width="240" class-name="small-padding fixed-width"
-                         v-if="hasPermi(['quality:question:{id}:put','quality:question:{id}:post',])">
+                         v-if="hasPermi(['qualityfollow:questionfollow:post','qualityfollow:questionfollow:post1'])">
           <template slot-scope="scope">
-            <el-button size="mini" type="text" icon="el-icon-view" v-hasPermi="['quality:question:get']"
-                       @click="agreeQualityFollow(scope.row)" v-if="scope.row.status==='申请关闭'">同意
+            <el-button type="success" v-hasPermi="['qualityfollow:questionfollow:post']"
+                       @click="agreeQualityFollow(scope.row)" v-if="judgeButton(scope.row)">关闭
             </el-button>
-            <el-button size="mini" type="text" icon="el-icon-edit" v-hasPermi="['quality:question:{id}:put']"
-                       @click="rejectQualityFollow(scope.row)" v-if="scope.row.status==='申请关闭'">驳回
+            <el-button type="danger" v-hasPermi="['qualityfollow:questionfollow:post1']"
+                       @click="rejectQualityFollow(scope.row)" v-if="judgeButton(scope.row)">驳回
             </el-button>
           </template>
         </el-table-column>
@@ -110,20 +110,18 @@
         <el-descriptions-item label="详细计划(时间、节点)">{{description.detailPlan}}</el-descriptions-item>
         <el-descriptions-item label="最新进度">{{description.content}}</el-descriptions-item>
       </el-descriptions>
-
     </el-card>
   </div>
 </template>
 
 <script>
   import {DailyProgressAdd, DailyProgressList,DailyProgressGet} from "@/api/quality_follow/daily_progress";
-  import {qualityFollowGet,qualityFollowUpdate} from '@/api/quality_follow/quality_follow';
+  import {qualityFollowGet,qualityResetStatus} from '@/api/quality_follow/quality_follow';
   import {listDept} from "@/api/vadmin/permission/dept";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
 
   let AllSubmitterName = [];
-  let AllPercentName=[];
   let AllFollowPersonName = [];
   let AllOfficeName = [];
   let AllStatusName = [];
@@ -217,14 +215,6 @@
       this.getDeptInfo();
     },
     methods: {
-      // // 获取当前人员信息
-      // getPercentInfo() {
-      //   getUserProfile().then(response => {
-      //     // AllPercentName=response.data;
-      //     console.log(response.data);
-      //     this.form.userId = response.data.id
-      //   })
-      // },
       //获取部门信息列表
       getDeptInfo() {
         listDept(this.officeIdParams).then(response => {
@@ -273,10 +263,10 @@
       },
       // 文件上传钩子
       handleRemove(file, fileList) {
-        // console.log(file, fileList);
+        console.log(file, fileList);
       },
       handlePreview(file) {
-        // console.log(file);
+        console.log(file);
       },
       // 自定义文件上传
       requestUpload(param) {
@@ -327,40 +317,71 @@
       },
       /*同意关闭每日进度*/
       agreeQualityFollow() {
-        this.$confirm('是否同意关闭名称为"' + "quesTitle" + '"的每日进度?', "警告", {
+        this.$confirm('是否关闭名称为"'+ this.description.quesTitle + '"的问题?', "警告", {
           confirmButtonText: "确定",
           cancelButtonText: "取消",
           type: "warning"
         }).then(() => {
           this.form.questionFollow = parseInt(this.$route.query.id);
           this.form.status = "批准关闭";
-          this.form.content = "OK";
-          //获取权限管理员信息
+          this.form.content = "批准关闭";
+          //获取当前用户信息
           getUserProfile().then(response => {
             this.form.officeId=response.data.deptId;
             this.form.userId = response.data.id;
-            //同意时添加一条同意进度
+            // 添加维护信息
             DailyProgressAdd(this.form).then(response => {
-              console.log(response.data);
               this.getDailyProgressList();
               this.getDescriptionList();
-              this.msgSuccess("批准关闭");
+              if(response.msg === 'success'){
+                this.msgSuccess('操作成功');
+              //  修改问题状态
+                const  queryParam = {
+                  id: parseInt(this.$route.query.id),
+                  status: 1
+                };
+                qualityResetStatus(queryParam).then(response =>{
+                  console.log(response.msg)
+                }
+                )
+              }
             });
           });
         })
       },
       //驳回关闭
       rejectQualityFollow(){
-
+        this.$confirm('是否驳回名称为"'+ this.description.quesTitle + '"的关闭申请?', "警告", {
+          confirmButtonText: "确定",
+          cancelButtonText: "取消",
+          type: "warning"
+        }).then(() => {
+          this.form.questionFollow = parseInt(this.$route.query.id);
+          this.form.status = "驳回申请";
+          this.form.content = "驳回申请";
+          //获取当前用户信息
+          getUserProfile().then(response => {
+            this.form.officeId=response.data.deptId;
+            this.form.userId = response.data.id;
+            // 添加维护信息
+            DailyProgressAdd(this.form).then(response => {
+              this.getDailyProgressList();
+              this.getDescriptionList();
+              if(response.msg === 'success'){
+                this.msgSuccess('操作成功')
+              }
+            });
+          });
+        })
       },
       /*每日答复列表*/
       getDailyProgressList() {
         this.loading = true;
         qualityFollowGet(parseInt(this.$route.query.id)).then(response=>{
-          // console.log(response.data.daily_follow)
           this.keepList =response.data.daily_follow;
           this.total = response.data.count;
           this.loading = false;
+          // 判断最后一条内容是否为
         }).catch(err => {
         })
       },
@@ -391,9 +412,6 @@
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
             });
-
-            // //跳转至显示页面
-            // this.questionPath(response.data.id);
           } else {
             console.log('error submit!!');
           }
@@ -403,6 +421,12 @@
       resetForm(queryForm) {
         this.$refs[queryForm].resetFields();
       },
+      // 判断维护信息是否为申请关闭状态
+      judgeButton(row){
+        const content = this.keepList.slice(-1)[0].status; // 最新维护信息content
+        const newId = this.keepList.slice(-1)[0].id;       // 最新维护信息id
+        return (content === '申请关闭' && row.status === '申请关闭' && newId === row.id);
+      }
 
     },
   };

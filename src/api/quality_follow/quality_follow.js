@@ -40,5 +40,23 @@ export function qualityFollowDelete(qualityFollowId) {
     url: '/qualityFollow/questionFollow/' + qualityFollowId+ '/',
     method: 'delete'
   })
+}
+
+// 问题状态更新
+export function qualityResetStatus(data) {
+  return request({
+    url: '/qualityFollow/questionFollow/resetStatus/',
+    method: 'put',
+    data: data
+  })
+}
+
+// 邮件发送
+export function sendFollowEmail(data) {
+  return request({
+    url: '/qualityFollow/questionFollow/sendFollowEmail/',
+    method: 'put',
+    data: data
+  })
 
 }
