@@ -61,30 +61,30 @@
         <template slot-scope="scope">{{scope.$index+1}}</template>
       </el-table-column>
       <el-table-column label="操作" align="center" fixed width="240" class-name="small-padding fixed-width"
-                       v-if="hasPermi(['quality:question:{id}:put','quality:question:{id}:post','quality:question:{id}:delete','quality:question:get'])">
+                       v-if="hasPermi(['qualityfollow:dailyprogress:get','qualityfollow:questionfollow:{id}:put',
+                       'qualityfollow:questionfollow:{id}:delete','qualityfollow:questionfollow:get'])">
         <template slot-scope="scope">
-          <el-button size="mini" type="text" icon="el-icon-view" v-hasPermi="['quality:question:get']"
+          <el-button size="mini" type="text" icon="el-icon-view" v-hasPermi="['qualityfollow:questionfollow:get']"
                      @click="lookQualityFollow(scope.row)">详情
           </el-button>
-          <el-button size="mini" type="text" icon="el-icon-edit" v-hasPermi="['quality:question:{id}:put']"
+          <el-button size="mini" type="text" icon="el-icon-edit" v-hasPermi="['qualityfollow:questionfollow:{id}:put']"
                      @click="updateQualityFollow(scope.row)">更新
           </el-button>
-          <el-button size="mini" type="text" icon="el-icon-delete" v-hasPermi="['quality:question:{id}:delete']"
+          <el-button size="mini" type="text" icon="el-icon-delete" v-hasPermi="['qualityfollow:questionfollow:{id}:delete']"
                      @click="deleteQualityFollow(scope.row)">删除
           </el-button>
-          <el-button size="mini" type="text" icon="el-icon-edit" v-hasPermi="['quality:question:{id}:post']"
+          <el-button size="mini" type="text" icon="el-icon-edit" v-hasPermi="['qualityfollow:dailyprogress:get']"
                      @click="addPath_keep(scope.row)">维护进度
           </el-button>
         </template>
       </el-table-column>
       <el-table-column prop="status" label="问题状态" width="150" align="center">
-        <template slot-scope="{row}">
-          {{row.status | statusNameFilter}}
+        <template slot-scope="scope">
+          <span v-html="questionStatus(scope.row)"></span>
         </template>
       </el-table-column>
       <el-table-column label="维护状态" width="150" align="center">
         <template slot-scope="scope">
-          <!--          {{dailyStatus(scope.row)}}-->
           <span v-html="dailyStatus(scope.row)"></span>
         </template>
       </el-table-column>
@@ -109,9 +109,6 @@
         </template>
       </el-table-column>
       <el-table-column prop="content" label="最新进度" width="150" align="center">
-        <!--        <template slot-scope="{row}">-->
-        <!--          {{row.daily_follow.slice(-1)[0].content}}-->
-        <!--        </template>-->
         <template slot-scope="scope">
           {{dailyContent(scope.row)}}
         </template>
@@ -134,7 +131,7 @@
       <el-card shadow="always">
         <h2>任务单详情</h2>
         <el-descriptions class="margin-top" direction="vertical" :column="2" border>
-          <el-descriptions-item label="状态">{{form.status | statusNameFilter}}</el-descriptions-item>
+          <el-descriptions-item label="状态"><span v-html="quesDetailStatus(form)"></span></el-descriptions-item>
           <el-descriptions-item label="发生时间">{{form.occurTime}}</el-descriptions-item>
           <el-descriptions-item label="下单人">{{form.submitter | submitterNameFilter}}</el-descriptions-item>
           <el-descriptions-item label="是否涉及其它产品">{{form.relate}}</el-descriptions-item>
@@ -173,17 +170,15 @@
 </template>
 
 <script>
-  import {DailyProgressList, DailyProgressGet, DailyProgressDelete} from "@/api/quality_follow/daily_progress";
-  import {qualityFollowDelete, qualityFollowList,} from '@/api/quality_follow/quality_follow';
-  import {addSaveFile, downloadFile, getSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
-  import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
-  import {isInteger} from "@/utils/validate";
+  import {DailyProgressDelete, DailyProgressList} from "@/api/quality_follow/daily_progress";
+  import {qualityFollowDelete, qualityFollowList, sendFollowEmail} from '@/api/quality_follow/quality_follow';
+  import {addSaveFile, delSaveFile, downloadFile, getSaveFile} from "@/api/vadmin/system/savefile";
+  import {listUser} from "@/api/vadmin/permission/user";
   import {listDept} from "@/api/vadmin/permission/dept";
 
   let AllSubmitterName = [];
   let AllFollowPersonName = [];
   let AllOfficeName = [];
-  let AllStatusName = [{value: 0, label: "未关闭"}, {value: 1, label: "已关闭"}];
   export default {
     name: "index",
     filters: {
@@ -204,12 +199,6 @@
         const Id = parseInt(officeID);
         const message = AllOfficeName.find(item => item.id === Id);
         return message ? message.deptName : null
-      },
-      // 问题状态过滤器
-      statusNameFilter(status) {
-        const Id = parseInt(status);
-        const message = AllStatusName.find(item => item.value === Id);
-        return message ? message.label : null
       },
     },
     data() {
@@ -240,11 +229,6 @@
         },
         //科室列表
         officeIdOptions: [],
-        //状态列表
-        statusOptions: [
-          {value: 0, label: "未关闭"},
-          {value: 1, label: "已关闭"},
-        ],
         // 售后问题List
         qualityFollowList: [],
         //附件
@@ -263,6 +247,11 @@
         questionOriginOptions: [
           {value: '厂内', label: '厂内'},
           {value: '厂外', label: '厂外'}
+        ],
+        // 问题状态
+        statusOptions: [
+          {value: 0, label: '未关闭'},
+          {value: 1, label: '已关闭'},
         ],
         // 查询参数
         queryParams: {
@@ -286,21 +275,16 @@
         //下单人选项
         submitterParams: {
           pageNum: 'all',
-          // deptId: 5
         },
         //下单人列表
         submitterList: [],
-        // //跟进人选项
-        // followPersonParams: {
-        //   pageNum: 'all',
-        //   deptId: 5
-        // },
         //跟进人列表
         followPersonList: [],
       }
     },
     created() {
       this.getDeptInfo();
+      this.sendEmail();
     },
     methods: {
       //获取部门信息列表
@@ -311,12 +295,6 @@
           this.getSubmitterList();
         })
       },
-      // //加载列表跟进人人员信息
-      // getFollowPersonList() {
-      //   listUser(this.followPersonParams).then(response => {
-      //     this.followPersonList = response.data;
-      //   })
-      // },
       //加载全部人员信息
       getSubmitterList() {
         listUser(this.submitterParams).then(response => {
@@ -324,7 +302,6 @@
           AllFollowPersonName = response.data;
           this.submitterList = response.data;
           this.followPersonList = response.data;
-          // this.getStatusList();
           this.getQualityFollowList();
         })
       },
@@ -432,7 +409,6 @@
       getQualityFollowList() {
         this.loading = true;
         qualityFollowList(this.queryParams).then(response => {
-          // console.log(response.data.results[0].daily_follow.slice(-1)[0].content);
           this.qualityFollowList = response.data.results;
           this.total = response.data.count;
           this.loading = false;
@@ -492,9 +468,8 @@
       seeCancel() {
         this.seeOpen = false;
       },
-      // 判断问题维护状态
+      // 判断维护状态
       dailyStatus(row) {
-        // 判断问题状态
         let updateDate;
         let nowDate;
         if (row.status === 0) {
@@ -504,7 +479,6 @@
           if (updateDate === nowDate) {
             return '<span>已维护每日进度</span>';
           } else {
-            // return '未维护每日进度';
             return '<span style="color: red">未维护每日进度</span>';
           }
         } else {
@@ -513,10 +487,7 @@
       },
       // 获取每日更新时间
       dailyDateTime(row) {
-        let updateTime = undefined;
-        for (let i = 0; i < row.daily_follow.length; i++) {
-          updateTime = row.daily_follow[i].create_datetime;
-        }
+        let updateTime = row.daily_follow.slice(-1)[0].create_datetime;
         return updateTime.split(" ")[0];
       },
       // 获取最新的更新内容
@@ -533,9 +504,50 @@
         let year = nowDate.getFullYear();//年
         let month = nowDate.getMonth() + 1;//注意！月份是从0月开始获取的，所以要+1;
         let day = nowDate.getDate();//日
-        const todayDate = year + '-' + (month >= 10 ? month : '0' + month) + '-' + (day >= 10 ? day : '0' + day);
-        console.log(todayDate);
-      }
+        return year + '-' + (month >= 10 ? month : '0' + month) + '-' + (day >= 10 ? day : '0' + day);
+      },
+      // 判断问题状态
+      questionStatus(row){
+        const dailyStatus = row.daily_follow.slice(-1)[0].status;
+        if (row.status === 0){
+          if (dailyStatus === '申请关闭'){
+            return '<span style="color: red">申请关闭</span>'
+          }else if(dailyStatus === '驳回申请'){
+            return '<span style="color: red">驳回申请</span>'
+          }else{
+            return '<span>未关闭</span>'
+          }
+        }else if (row.status === 1){
+          return '<span>已关闭</span>'
+        }
+      },
+      // 邮件发送
+      sendEmail(){
+        if(this.$route.params.id !== undefined){
+          const params = {
+            id: parseInt(this.$route.params.id),
+            url: window.location.href
+          };
+          sendFollowEmail(params).then(response => {
+            console.log(response.msg)
+          })
+        }
+      },
+    //  详情页面进行问题状态判断
+      quesDetailStatus(form){
+        if(form.status === 0){
+          if (form.content === '申请关闭'){
+            return '<span style="color: red">申请关闭</span>'
+          }else if (form.content === '驳回申请'){
+            return '<span style="color: red">驳回申请</span>'
+          }else {
+            return '<span>未关闭</span>'
+          }
+        }else if(form.status === 1){
+          return '<span>已关闭</span>'
+        }
+      },
+
     }
   }
 </script>

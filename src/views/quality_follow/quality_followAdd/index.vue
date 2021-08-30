@@ -349,6 +349,7 @@
       },
       //提交表单
       onSubmit(queryForm) {
+
         this.$refs[queryForm].validate((valid) => {
           // 问题新增提交
           if (valid) {
@@ -363,17 +364,19 @@
                 loading.close();
                 this.msgSuccess("修改成功");
                 this.$refs[queryForm].resetFields();
-              })``
+              })
           } else {
               qualityFollowAdd(this.form).then(response => {
                 this.params.questionFollow = response.data.id;
                 this.params.userId = this.form.submitter;
                 this.params.officeId = this.form.officeId;
                 this.params.content = this.form.content;
+                const questionId = response.data.id;
                 DailyProgressAdd(this.params).then(response => {
                   loading.close();
                   this.msgSuccess("新增成功");
                   this.$refs[queryForm].resetFields();
+                  this.$router.push({name:'Quality_followlist', params: {id: questionId}})
                 })
               });
             }
