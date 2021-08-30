@@ -339,7 +339,7 @@
           getUserProfile().then(response => {
             this.form.officeId=response.data.deptId;
             this.form.userId = response.data.id;
-            //同意时添加一条同意进度
+            //同意时添加一条同意记录
             DailyProgressAdd(this.form).then(response => {
               console.log(response.data);
               this.getDailyProgressList();
