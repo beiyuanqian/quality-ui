@@ -108,13 +108,13 @@
           {{row.followPerson | followPersonNameFilter}}
         </template>
       </el-table-column>
-      <el-table-column prop="content" label="最新进度" width="150" align="center">
+      <el-table-column prop="content" label="最新进度" width="150" align="center" show-overflow-tooltip>
         <template slot-scope="scope">
           {{dailyContent(scope.row)}}
         </template>
       </el-table-column>
       <el-table-column prop="questionOrigin" label="问题来源" width="150" align="center"></el-table-column>
-      <el-table-column prop="fileName" label="附件" width="150" align="center">
+      <el-table-column prop="fileName" label="附件" width="200" align="center" show-overflow-tooltip>
         <template slot-scope="{row}">
           <el-button type="text" @click="downloadTrigger(row)">
             {{row.fileName}}
@@ -158,8 +158,14 @@
             </template>
           </el-table-column>
           <el-table-column prop="status" label="名称" align="center"></el-table-column>
-          <el-table-column prop="content" label="答复内容" align="center"></el-table-column>
-          <el-table-column prop="fileName" label="附件" align="center"></el-table-column>
+          <el-table-column prop="content" label="答复内容" align="center" show-overflow-tooltip></el-table-column>
+          <el-table-column prop="fileName" label="附件" align="center" show-overflow-tooltip>
+            <template slot-scope="{row}">
+              <el-button type="text" @click="downloadTrigger(row)">
+                {{row.fileName}}
+              </el-button>
+            </template>
+          </el-table-column>
         </el-table>
       </el-card>
       <div slot="footer" class="dialog-footer">

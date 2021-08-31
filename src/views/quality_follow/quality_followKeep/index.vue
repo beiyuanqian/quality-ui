@@ -77,8 +77,14 @@
           </template>
         </el-table-column>
         <el-table-column prop="status" label="名称" align="center"></el-table-column>
-        <el-table-column prop="content" label="答复内容" align="center"></el-table-column>
-        <el-table-column prop="fileName" label="附件" align="center"></el-table-column>
+        <el-table-column prop="content" label="答复内容" align="center" show-overflow-tooltip></el-table-column>
+        <el-table-column prop="fileName" label="附件" align="center" show-overflow-tooltip>
+          <template slot-scope="{row}">
+            <el-button type="text" @click="downloadTrigger(row)">
+              {{row.fileName}}
+            </el-button>
+          </template>
+        </el-table-column>
         <el-table-column label="操作" align="center" fixed="right" width="240" class-name="small-padding fixed-width"
                          v-if="hasPermi(['qualityfollow:questionfollow:post','qualityfollow:questionfollow:post1'])">
           <template slot-scope="scope">
@@ -118,7 +124,7 @@
   import {DailyProgressAdd, DailyProgressList,DailyProgressGet} from "@/api/quality_follow/daily_progress";
   import {qualityFollowGet,qualityResetStatus} from '@/api/quality_follow/quality_follow';
   import {listDept} from "@/api/vadmin/permission/dept";
-  import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
+  import {addSaveFile, delSaveFile, downloadFile, getSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
 
   let AllSubmitterName = [];
@@ -309,6 +315,25 @@
           this.form.fileId = null;
           this.form.fileName = null;
           this.msgSuccess("删除成功");
+        })
+      },
+      /*附件下载*/
+      downloadTrigger(row) {
+        const fileName = row.fileName;
+        getSaveFile(row.fileId).then(response => {
+          this.fileForm.fileName = fileName;
+          this.fileForm.filePath = response.data.file_url;
+          downloadFile(this.fileForm).then(response => {
+            const downloadElement = document.createElement("a");
+            let blob = new Blob([response], {type: 'application/octet-stream'});
+            let href = window.URL.createObjectURL(blob);
+            downloadElement.href = href;
+            downloadElement.download = fileName; //下载后文件名
+            document.body.appendChild(downloadElement);
+            downloadElement.click(); //点击下载
+            document.body.removeChild(downloadElement); //下载完成移除元素
+            window.URL.revokeObjectURL(href); //释放掉blob对象
+          })
         })
       },
       // 附件按钮禁用

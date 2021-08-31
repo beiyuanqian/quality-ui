@@ -128,7 +128,7 @@
 <script>
   import {DailyProgressAdd,} from "@/api/quality_follow/daily_progress";
   import {qualityFollowAdd, qualityFollowGet, qualityFollowUpdate} from "@/api/quality_follow/quality_follow";
-  import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
+  import {addSaveFile, getSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept, listDept} from "@/api/vadmin/permission/dept";
 
@@ -332,9 +332,14 @@
         if (this.$route.query.id) {
           this.loading = true;
           qualityFollowGet(parseInt(this.$route.query.id)).then(response => {
+            console.log(response.data);
             this.disabled = true;
             this.form = response.data;
             this.form.content = response.data.daily_follow.slice(-1)[0].content;
+            this.fileList = [];
+            if (this.form.fileId !== null) {
+              this.selectSaveFileId(this.form.fileId);
+            }
             this.getDeptInfo();
             this.getSubmitterInfo();
             this.getFollowPersonList();
@@ -346,6 +351,12 @@
           this.getSubmitterInfo();
           this.getFollowPersonList();
         }
+      },
+      /* 修改时加载附件内容*/
+      selectSaveFileId(fileId) {
+        getSaveFile(fileId).then(response => {
+          this.fileList.push(response.data)
+        })
       },
       //提交表单
       onSubmit(queryForm) {
