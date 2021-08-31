@@ -173,7 +173,7 @@
         //处理人列表
         userIdParams: {
           pageNum: 'all',
-          // deptId: 5
+          deptId: 5
         },
         //跟进人列表
         userIdList: [],

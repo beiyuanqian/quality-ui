@@ -281,6 +281,7 @@
         //下单人选项
         submitterParams: {
           pageNum: 'all',
+          deptId: 5
         },
         //下单人列表
         submitterList: [],
