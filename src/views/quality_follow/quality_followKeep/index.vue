@@ -6,13 +6,13 @@
                label-width="120px">
         <el-row>
           <el-form-item label="分析科室" prop="officeId">
-            <el-select v-model="form.officeId" placeholder="请选择分析科室" size="small" clearable>
+            <el-select v-model="form.officeId" placeholder="请选择分析科室" size="small" clearable disabled>
               <el-option v-for="item in officeIdOptions" :value="item.id" :label="item.deptName"
                          :key="item.id"></el-option>
             </el-select>
           </el-form-item>
           <el-form-item label="处理人" prop="userId">
-            <el-select v-model="form.userId" clearable size="small" placeholder="请选择处理人">
+            <el-select v-model="form.userId" clearable size="small" placeholder="请选择处理人" disabled>
               <el-option v-for="dict in userIdList" :key="dict.id" :label="dict.name" :value="dict.id"/>
             </el-select>
           </el-form-item>
@@ -123,7 +123,7 @@
 <script>
   import {DailyProgressAdd, DailyProgressList,DailyProgressGet} from "@/api/quality_follow/daily_progress";
   import {qualityFollowGet,qualityResetStatus} from '@/api/quality_follow/quality_follow';
-  import {listDept} from "@/api/vadmin/permission/dept";
+  import {listDept,getDept} from "@/api/vadmin/permission/dept";
   import {addSaveFile, delSaveFile, downloadFile, getSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
 
@@ -173,7 +173,7 @@
         //处理人列表
         userIdParams: {
           pageNum: 'all',
-          deptId: 5
+          // deptId: 5
         },
         //跟进人列表
         userIdList: [],
@@ -202,7 +202,7 @@
         form: {
           officeId: undefined,
           userId: undefined,
-          status: undefined,
+          status: "每日答复",
           content: undefined,
           questionFollow: undefined,
           fileId: undefined,
@@ -218,15 +218,32 @@
       }
     },
     created() {
-      this.getDeptInfo();
+      this.getUserIdInfo();
+      this.getDeptList();
+      this.getUserIdList()
     },
     methods: {
+      // 获取处理人信息
+      getUserIdInfo() {
+        getUserProfile().then(response => {
+          this.form.userId=response.data.id;
+          this.userIdList.push(response.data);
+          this.getDeptInfo(response.data.deptId);
+          this.getStatusList();
+        })
+      },
+      //获取处理人部门信息
+      getDeptInfo(id) {
+        getDept(id).then(response => {
+          this.form.officeId= response.data.id;
+          this.officeIdOptions.push(response.data);
+        })
+      },
       //获取部门信息列表
-      getDeptInfo() {
+      getDeptList() {
         listDept(this.officeIdParams).then(response => {
           AllOfficeName = response.data;
-          this.officeIdOptions = response.data;
-          this.getUserIdList();
+          this.getUserIdList()
         })
       },
       //加载全部人员信息
@@ -234,8 +251,6 @@
         listUser(this.userIdParams).then(response => {
           AllSubmitterName = response.data;
           AllFollowPersonName = response.data;
-          this.userIdList = response.data;
-          this.getStatusList();
         })
       },
       //加载问题状态信息
@@ -432,12 +447,13 @@
               background: 'rgba(0,0,0,0.7)'
             });
             DailyProgressAdd(this.form).then(response => {
-              this.getDailyProgressList();
-              this.getDescriptionList();
               loading.close();
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
               this.$refs.upload.clearFiles();
+              this.getUserIdInfo();
+              // this.getDailyProgressList();
+              // this.getDescriptionList();
             });
           } else {
             console.log('error submit!!');
