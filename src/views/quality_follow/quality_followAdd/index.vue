@@ -127,7 +127,7 @@
 
 <script>
   import {DailyProgressAdd,} from "@/api/quality_follow/daily_progress";
-  import {qualityFollowAdd, qualityFollowGet,qualityFollowUpdate} from "@/api/quality_follow/quality_follow";
+  import {qualityFollowAdd, qualityFollowGet, qualityFollowUpdate} from "@/api/quality_follow/quality_follow";
   import {addSaveFile, delSaveFile} from "@/api/vadmin/system/savefile";
   import {getUserProfile, listUser} from "@/api/vadmin/permission/user";
   import {getDept, listDept} from "@/api/vadmin/permission/dept";
@@ -142,7 +142,7 @@
         //对齐方式
         labelPosition: 'right',
         //最新进度
-        disabled:false,
+        disabled: false,
         //附件列表
         fileList: [],
         //日期禁用
@@ -328,20 +328,20 @@
         return id > 0;
       },
       //判断是更新还是新增
-      getJudgement(){
-        if(this.$route.query.id){
+      getJudgement() {
+        if (this.$route.query.id) {
           this.loading = true;
-          qualityFollowGet(parseInt(this.$route.query.id)).then(response=>{
-            this.disabled=true;
-            this.form =response.data;
-            this.form.content=response.data.daily_follow.slice(-1)[0].content;
+          qualityFollowGet(parseInt(this.$route.query.id)).then(response => {
+            this.disabled = true;
+            this.form = response.data;
+            this.form.content = response.data.daily_follow.slice(-1)[0].content;
             this.getDeptInfo();
             this.getSubmitterInfo();
             this.getFollowPersonList();
             this.loading = false;
           }).catch(err => {
           })
-        }else{
+        } else {
           this.getDeptInfo();
           this.getSubmitterInfo();
           this.getFollowPersonList();
@@ -349,7 +349,6 @@
       },
       //提交表单
       onSubmit(queryForm) {
-
         this.$refs[queryForm].validate((valid) => {
           // 问题新增提交
           if (valid) {
@@ -359,13 +358,16 @@
               text: '信息上传中',
               background: 'rgba(0,0,0,0.7)'
             });
+            //
             if (this.$route.query.id) {
               qualityFollowUpdate(this.form).then(response => {
                 loading.close();
                 this.msgSuccess("修改成功");
                 this.$refs[queryForm].resetFields();
+                this.$refs.upload.clearFiles();
+                this.$router.push({name: 'Quality_followlist', params: {id: response.data.id}})
               })
-          } else {
+            } else {
               qualityFollowAdd(this.form).then(response => {
                 this.params.questionFollow = response.data.id;
                 this.params.userId = this.form.submitter;
@@ -376,14 +378,15 @@
                   loading.close();
                   this.msgSuccess("新增成功");
                   this.$refs[queryForm].resetFields();
-                  this.$router.push({name:'Quality_followlist', params: {id: questionId}})
+                  this.$refs.upload.clearFiles();
+                  this.$router.push({name: 'Quality_followlist', params: {id: questionId}})
                 })
               });
             }
           } else {
             console.log('error submit!!');
           }
-          });
+        });
       },
       //点击取消重置表单内容
       resetForm(queryForm) {

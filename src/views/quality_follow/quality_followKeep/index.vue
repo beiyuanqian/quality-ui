@@ -342,8 +342,8 @@
                 };
                 qualityResetStatus(queryParam).then(response =>{
                   console.log(response.msg)
-                }
-                )
+                });
+                this.reset();
               }
             });
           });
@@ -368,7 +368,8 @@
               this.getDailyProgressList();
               this.getDescriptionList();
               if(response.msg === 'success'){
-                this.msgSuccess('操作成功')
+                this.msgSuccess('操作成功');
+                this.reset();
               }
             });
           });
@@ -411,6 +412,7 @@
               loading.close();
               this.msgSuccess("新增成功");
               this.$refs[queryForm].resetFields();
+              this.$refs.upload.clearFiles();
             });
           } else {
             console.log('error submit!!');
@@ -426,8 +428,19 @@
         const content = this.keepList.slice(-1)[0].status; // 最新维护信息content
         const newId = this.keepList.slice(-1)[0].id;       // 最新维护信息id
         return (content === '申请关闭' && row.status === '申请关闭' && newId === row.id);
+      },
+      // 重置表单
+      reset(){
+        this.form = {
+          officeId: undefined,
+            userId: undefined,
+            status: undefined,
+            content: undefined,
+            questionFollow: undefined,
+            fileId: undefined,
+            fileName: undefined,
+        }
       }
-
     },
   };
 </script>
